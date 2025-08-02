@@ -75,7 +75,7 @@ web/firebase-config.js
 .env.staging
 .env.production
 
-# Generated files
-*.g.dart
-*.freezed.dart
-*.mocks.dart
+# Generated files (uncomment for production builds)
+# *.g.dart
+# *.freezed.dart
+# *.mocks.dart

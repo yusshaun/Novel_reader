@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/epub_book.dart';
+import '../providers/reader_theme_provider.dart';
 
-class ReaderAppBar extends StatelessWidget implements PreferredSizeWidget {
+class ReaderAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final EpubBook book;
   final int currentChapter;
   final int totalChapters;
@@ -16,7 +18,7 @@ class ReaderAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return AppBar(
       backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.9),
       elevation: 0,
@@ -73,11 +75,11 @@ class ReaderAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
-class ReaderSettingsPanel extends StatelessWidget {
+class ReaderSettingsPanel extends ConsumerWidget {
   const ReaderSettingsPanel({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -91,64 +93,77 @@ class ReaderSettingsPanel extends StatelessWidget {
           const SizedBox(height: 24),
           
           // Font Size Slider
-          Text(
-            'Font Size',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          Slider(
-            value: 16.0, // TODO: Connect to reader theme
-            min: 12.0,
-            max: 32.0,
-            divisions: 20,
-            label: '16', // TODO: Connect to actual value
-            onChanged: (value) {
-              // TODO: Update font size
+          Consumer(
+            builder: (context, ref, child) {
+              final readerTheme = ref.watch(readerThemeProvider);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Font Size',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Slider(
+                    value: readerTheme.fontSize,
+                    min: 12.0,
+                    max: 32.0,
+                    divisions: 20,
+                    label: readerTheme.fontSize.round().toString(),
+                    onChanged: (value) {
+                      ref.read(readerThemeProvider.notifier).updateFontSize(value);
+                    },
+                  ),
+                ],
+              );
             },
           ),
           
           const SizedBox(height: 16),
           
           // Font Family
-          Text(
-            'Font Family',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              ChoiceChip(
-                label: const Text('NotoSans'),
-                selected: true, // TODO: Connect to actual selection
-                onSelected: (selected) {
-                  // TODO: Update font family
-                },
-              ),
-              ChoiceChip(
-                label: const Text('Roboto'),
-                selected: false,
-                onSelected: (selected) {
-                  // TODO: Update font family
-                },
-              ),
-              ChoiceChip(
-                label: const Text('OpenSans'),
-                selected: false,
-                onSelected: (selected) {
-                  // TODO: Update font family
-                },
-              ),
-            ],
+          Consumer(
+            builder: (context, ref, child) {
+              final readerTheme = ref.watch(readerThemeProvider);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Font Family',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: ReaderTheme.availableFonts.map((font) {
+                      return ChoiceChip(
+                        label: Text(font),
+                        selected: readerTheme.fontFamily == font,
+                        onSelected: (selected) {
+                          if (selected) {
+                            ref.read(readerThemeProvider.notifier).updateFontFamily(font);
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              );
+            },
           ),
           
           const SizedBox(height: 16),
           
           // Theme Toggle
-          SwitchListTile(
-            title: const Text('Dark Mode'),
-            value: false, // TODO: Connect to theme
-            onChanged: (value) {
-              // TODO: Toggle dark mode
+          Consumer(
+            builder: (context, ref, child) {
+              final readerTheme = ref.watch(readerThemeProvider);
+              return SwitchListTile(
+                title: const Text('Dark Mode'),
+                value: readerTheme.darkMode,
+                onChanged: (value) {
+                  ref.read(readerThemeProvider.notifier).toggleDarkMode();
+                },
+              );
             },
           ),
           

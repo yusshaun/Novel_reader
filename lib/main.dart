@@ -10,6 +10,7 @@ import 'models/epub_book.dart';
 import 'models/bookshelf.dart';
 import 'models/reader_theme.dart';
 import 'models/reading_progress.dart';
+import 'providers/reading_progress_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -8,6 +8,7 @@ import 'dart:convert';
 import '../models/epub_book.dart';
 import '../models/reading_progress.dart';
 import '../providers/reader_theme_provider.dart';
+import '../providers/reading_progress_provider.dart';
 import '../services/epub_service.dart';
 import '../widgets/reader_app_bar.dart';
 import '../widgets/reader_drawer.dart';
@@ -48,10 +49,31 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
       vsync: this,
     );
     _loadEpubBook();
+    
+    // Start reading session
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(currentReadingSessionProvider.notifier).state = ReadingSession(
+        bookId: widget.book.id,
+        startTime: DateTime.now(),
+      );
+    });
   }
 
   @override
   void dispose() {
+    // End reading session and save progress
+    final session = ref.read(currentReadingSessionProvider);
+    if (session != null) {
+      ref.read(readingProgressProvider.notifier).updateProgress(
+        bookId: widget.book.id,
+        page: _currentPageIndex,
+        chapterId: _currentChapterIndex.toString(),
+        chapterTitle: _chapters?[_currentChapterIndex].Title,
+        additionalReadingTime: session.duration,
+        totalPages: _pages.length,
+      );
+    }
+    
     _pageController.dispose();
     _appBarAnimationController.dispose();
     super.dispose();
@@ -256,6 +278,21 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
                 setState(() {
                   _currentPageIndex = index;
                 });
+                
+                // Update reading session activity
+                final session = ref.read(currentReadingSessionProvider);
+                session?.updateActivity();
+                
+                // Save progress periodically
+                if (index % 5 == 0) { // Save every 5 pages
+                  ref.read(readingProgressProvider.notifier).updateProgress(
+                    bookId: widget.book.id,
+                    page: index,
+                    chapterId: _currentChapterIndex.toString(),
+                    chapterTitle: _chapters?[_currentChapterIndex].Title,
+                    totalPages: _pages.length,
+                  );
+                }
               },
               itemCount: _pages.length,
               itemBuilder: (context, index) {

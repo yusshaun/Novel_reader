@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/epub_book.dart';
+import '../models/reading_progress.dart';
+import '../providers/reading_progress_provider.dart';
 
-class BookGrid extends StatelessWidget {
+class BookGrid extends ConsumerWidget {
   final List<EpubBook> books;
   final Function(String) onBookTap;
   final int crossAxisCount;
@@ -14,7 +17,7 @@ class BookGrid extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (books.isEmpty) {
       return const Center(
         child: Text('No books to display'),
@@ -30,6 +33,7 @@ class BookGrid extends StatelessWidget {
       children: books.map((book) => BookCard(
         book: book,
         onTap: () => onBookTap(book.id),
+        progress: ref.watch(readingProgressProvider)[book.id],
       )).toList(),
     );
   }
@@ -38,11 +42,13 @@ class BookGrid extends StatelessWidget {
 class BookCard extends StatelessWidget {
   final EpubBook book;
   final VoidCallback onTap;
+  final ReadingProgress? progress;
 
   const BookCard({
     super.key,
     required this.book,
     required this.onTap,
+    this.progress,
   });
 
   @override
@@ -96,7 +102,9 @@ class BookCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     LinearProgressIndicator(
-                      value: 0.0, // TODO: Connect to reading progress
+                      value: progress?.progressPercentage != null 
+                          ? (progress!.progressPercentage / 100).clamp(0.0, 1.0)
+                          : 0.0,
                       backgroundColor: Theme.of(context).colorScheme.outline,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         Theme.of(context).colorScheme.primary,
