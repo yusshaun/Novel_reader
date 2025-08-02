@@ -10,6 +10,7 @@ import '../widgets/bookshelf_drawer.dart';
 import '../widgets/app_bar_search.dart';
 import '../services/epub_service.dart';
 import 'epub_reader_screen.dart';
+import '../utils/platform_file_import.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -42,48 +43,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
 
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['epub'],
-        allowMultiple: true,
-      );
+      final filePaths = await PlatformFileImport.pickEpubFiles();
 
-      if (result != null && result.files.isNotEmpty) {
-        final epubService = ref.read(epubServiceProvider);
-        final booksNotifier = ref.read(booksProvider.notifier);
-        final defaultShelf = ref.read(bookshelvesProvider.notifier).getDefaultShelf();
-
-        for (final platformFile in result.files) {
-          if (platformFile.path != null) {
-            final file = File(platformFile.path!);
-            final book = await epubService.parseEpubFile(file);
-            
-            if (book != null) {
-              await booksNotifier.addBook(book);
-              
-              if (defaultShelf != null) {
-                await ref
-                    .read(bookshelvesProvider.notifier)
-                    .addBookToShelf(defaultShelf.id, book.id);
-              }
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Added "${book.title}" to library'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            }
-          }
-        }
+      if (filePaths != null && filePaths.isNotEmpty) {
+        await _processEpubFiles(filePaths);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error importing book: $e'),
+            content: Text('Error importing books: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -94,6 +63,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _processEpubFiles(List<String> filePaths) async {
+    final epubService = ref.read(epubServiceProvider);
+    final booksNotifier = ref.read(booksProvider.notifier);
+    final defaultShelf = ref.read(bookshelvesProvider.notifier).getDefaultShelf();
+
+    for (final filePath in filePaths) {
+      try {
+        final file = File(filePath);
+        final book = await epubService.parseEpubFile(file);
+        
+        if (book != null) {
+          await booksNotifier.addBook(book);
+          
+          if (defaultShelf != null) {
+            await ref
+                .read(bookshelvesProvider.notifier)
+                .addBookToShelf(defaultShelf.id, book.id);
+          }
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Added "${book.title}" to library'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        print('Error processing file $filePath: $e');
       }
     }
   }
@@ -151,7 +154,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
       ),
       drawer: const BookshelfDrawer(),
-      body: TabBarView(
+      body: PlatformFileImport.buildDragDropWidget(
+        onFilesDropped: (filePaths) async {
+          if (filePaths.isNotEmpty) {
+            setState(() {
+              _isLoading = true;
+            });
+            await _processEpubFiles(filePaths);
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        },
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            // Library Tab
+            RefreshIndicator(
+              onRefresh: () async {
+                // Refresh the books list
+                ref.invalidate(booksProvider);
+              },
+              child: books.isEmpty
+                  ? _buildEmptyState()
+                  : BookGrid(
+                      books: filteredBooks,
+                      onBookTap: _openBook,
+                    ),
+            ),
+            
+            // Shelves Tab
+            _buildShelvesTab(bookshelves),
+            
+            // Recent Tab
+            _buildRecentTab(),
+          ],
+        ),
+      ) ?? TabBarView(
         controller: _tabController,
         children: [
           // Library Tab
@@ -175,16 +214,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           _buildRecentTab(),
         ],
       ),
-      floatingActionButton: _isLoading
-          ? const FloatingActionButton(
-              onPressed: null,
-              child: CircularProgressIndicator(),
-            )
-          : FloatingActionButton.extended(
-              onPressed: _importEpubFile,
-              icon: const Icon(Icons.add),
-              label: const Text('Import Book'),
-            ),
+      floatingActionButton: PlatformFileImport.buildFileImportButton(
+        onPressed: _importEpubFile,
+        isLoading: _isLoading,
+      ),
     );
   }
 

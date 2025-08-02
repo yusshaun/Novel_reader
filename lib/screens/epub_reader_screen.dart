@@ -12,6 +12,7 @@ import '../providers/reading_progress_provider.dart';
 import '../services/epub_service.dart';
 import '../widgets/reader_app_bar.dart';
 import '../widgets/reader_drawer.dart';
+import '../utils/epub_content_processor.dart';
 import '../widgets/reading_progress_indicator.dart';
 
 class EpubReaderScreen extends ConsumerStatefulWidget {
@@ -115,8 +116,16 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
       final htmlContent = chapter.HtmlContent ?? '';
       
       // Basic HTML to text conversion and pagination
-      final textContent = _htmlToText(htmlContent);
-      _pages = _paginateText(textContent);
+      final textContent = EpubContentProcessor.htmlToText(htmlContent);
+      _pages = EpubContentProcessor.paginateText(
+        textContent,
+        fontSize: theme.fontSize,
+        screenWidth: MediaQuery.of(context).size.width,
+        screenHeight: MediaQuery.of(context).size.height,
+        paddingHorizontal: theme.padding.horizontal,
+        paddingVertical: theme.padding.vertical,
+        lineHeight: theme.lineHeight,
+      );
       
       setState(() {
         _currentChapterIndex = chapterIndex;
@@ -134,38 +143,20 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
   }
 
   String _htmlToText(String html) {
-    // Basic HTML tag removal and text formatting
-    String text = html
-        .replaceAll(RegExp(r'<[^>]*>'), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    
-    // Decode HTML entities
-    text = text
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&#39;', "'")
-        .replaceAll('&nbsp;', ' ');
-    
-    return text;
+    return EpubContentProcessor.htmlToText(html);
   }
 
   List<String> _paginateText(String text) {
     final theme = ref.read(readerThemeProvider);
-    final words = text.split(' ');
-    final pages = <String>[];
-    
-    // Estimate words per page based on font size and screen size
-    const wordsPerPage = 250; // Rough estimation
-    
-    for (int i = 0; i < words.length; i += wordsPerPage) {
-      final pageWords = words.skip(i).take(wordsPerPage).toList();
-      pages.add(pageWords.join(' '));
-    }
-    
-    return pages.isEmpty ? [''] : pages;
+    return EpubContentProcessor.paginateText(
+      text,
+      fontSize: theme.fontSize,
+      screenWidth: MediaQuery.of(context).size.width,
+      screenHeight: MediaQuery.of(context).size.height,
+      paddingHorizontal: theme.padding.horizontal,
+      paddingVertical: theme.padding.vertical,
+      lineHeight: theme.lineHeight,
+    );
   }
 
   void _toggleAppBar() {
