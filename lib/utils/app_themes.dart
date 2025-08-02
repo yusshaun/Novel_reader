@@ -11,10 +11,10 @@ class AppThemes {
       centerTitle: true,
       elevation: 0,
     ),
-    cardTheme: CardTheme(
+    cardTheme: const CardThemeData(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
@@ -34,10 +34,10 @@ class AppThemes {
       centerTitle: true,
       elevation: 0,
     ),
-    cardTheme: CardTheme(
+    cardTheme: const CardThemeData(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
@@ -83,7 +83,7 @@ class AppThemes {
   static Color getContrastingTextColor(Color backgroundColor) {
     // Calculate relative luminance
     final luminance = backgroundColor.computeLuminance();
-    
+
     // Return white text for dark backgrounds, black text for light backgrounds
     return luminance > 0.5 ? Colors.black : Colors.white;
   }
@@ -96,7 +96,8 @@ class AppThemes {
 
   static Color lightenColor(Color color, [double amount = 0.1]) {
     final hsl = HSLColor.fromColor(color);
-    final hslLight = hsl.withLightness((hsl.lightness + amount).clamp(0.0, 1.0));
+    final hslLight =
+        hsl.withLightness((hsl.lightness + amount).clamp(0.0, 1.0));
     return hslLight.toColor();
   }
 }

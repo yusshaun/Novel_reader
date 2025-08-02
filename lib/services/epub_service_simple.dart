@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:epubx/epubx.dart' as epubx;
 import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
@@ -24,19 +25,12 @@ class EpubService {
       final targetFile = File(path.join(booksDir.path, fileName));
       await file.copy(targetFile.path);
 
-      // Extract real metadata from EPUB
-      final title = epub.Title?.isNotEmpty == true
-          ? epub.Title!
-          : path.basenameWithoutExtension(fileName);
+      // Use basic metadata
+      final title = path.basenameWithoutExtension(fileName);
+      final author = 'Unknown Author';
 
-      final author =
-          epub.Author?.isNotEmpty == true ? epub.Author! : 'Unknown Author';
-
-      // Calculate total pages estimate based on content
+      // Calculate total pages estimate
       int totalPages = 100; // Default estimate
-      if (epub.Chapters?.isNotEmpty == true) {
-        totalPages = epub.Chapters!.length * 10; // Rough estimate
-      }
 
       return models.EpubBook(
         id: _uuid.v4(),

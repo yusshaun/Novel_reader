@@ -93,15 +93,15 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
           print('Chapters method failed, showing comprehensive debug info');
 
           final debugLines = <String>[
-            '📚 EPUB 內容解析失敗',
+            '無法讀取 EPUB 內容',
             '',
-            '🔍 調試信息：',
-            '- 檔案路徑: ${widget.book.filePath}',
+            '調試信息：',
             '- 標題: ${epub.Title ?? "未知"}',
             '- 作者: ${epub.Author ?? "未知"}',
             '- 章節數量: ${epub.Chapters?.length ?? 0}',
+            '- 檔案路徑: ${widget.book.filePath}',
             '',
-            '📖 章節詳細信息：'
+            '章節詳細信息：'
           ];
 
           if (epub.Chapters != null && epub.Chapters!.isNotEmpty) {
@@ -116,46 +116,39 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
                     ? chapter.HtmlContent!.substring(0, 100) + '...'
                     : chapter.HtmlContent!;
                 debugLines.add('  - 內容預覽: $preview');
-
-                final text = _extractTextFromHtml(chapter.HtmlContent!);
-                debugLines.add('  - 提取文字長度: ${text.length}');
-                if (text.isNotEmpty) {
-                  final textPreview =
-                      text.length > 50 ? text.substring(0, 50) + '...' : text;
-                  debugLines.add('  - 文字預覽: "$textPreview"');
-                }
               }
             }
           } else {
-            debugLines.add('❌ 沒有找到章節信息');
+            debugLines.add('沒有找到章節信息');
           }
 
           debugLines.addAll([
             '',
-            '❓ 可能的問題：',
+            '可能的問題：',
             '1. EPUB檔案結構不標準',
             '2. 內容被DRM保護',
             '3. HTML內容為空或格式異常',
             '4. 編碼問題',
             '',
-            '💡 建議：',
+            '建議：',
             '- 確認檔案是有效的EPUB格式',
             '- 嘗試其他EPUB檔案進行測試',
             '- 檢查檔案是否有DRM保護',
             '',
-            '📝 測試範例內容：',
+            '範例內容（供測試）：',
             '━━━━━━━━━━━━━━━━━━━━',
             '',
             '第一章',
             '',
-            '這是《${widget.book.title}》的測試內容。',
+            '這是《${widget.book.title}》的範例內容。',
             '',
             '作者：${widget.book.author}',
             '',
-            '⚠️ 您看到此訊息表示無法讀取真實的EPUB內容。',
-            '這可能是由於檔案格式、保護機制或編碼問題。',
+            '這本書的內容無法正常讀取，可能是由於檔案格式或保護機制的問題。',
             '',
-            '請嘗試：',
+            '如果您看到此訊息，表示EPUB解析器無法提取真實內容。',
+            '',
+            '請嘗試以下解決方案：',
             '1. 確認檔案完整性',
             '2. 使用其他EPUB檔案測試',
             '3. 檢查檔案權限',
@@ -288,7 +281,6 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
     for (final para in paragraphs) {
       final paraTrimmed = para.trim();
       if (paraTrimmed.isEmpty) continue;
-
       // 若加上這個段落會超過一頁，則先分頁
       if (currentLength + paraTrimmed.length > charactersPerPage &&
           buffer.isNotEmpty) {
@@ -296,20 +288,13 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
         buffer.clear();
         currentLength = 0;
       }
-
-      if (buffer.isNotEmpty) {
-        buffer.write('\n\n');
-        currentLength += 2;
-      }
-
+      if (buffer.isNotEmpty) buffer.write('\n\n');
       buffer.write(paraTrimmed);
-      currentLength += paraTrimmed.length;
+      currentLength += paraTrimmed.length + 2; // 加上分段符號長度
     }
-
     if (buffer.isNotEmpty) {
       pages.add(buffer.toString().trim());
     }
-
     return pages.isEmpty ? [''] : pages;
   }
 

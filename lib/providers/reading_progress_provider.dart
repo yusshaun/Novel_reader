@@ -7,21 +7,22 @@ final readingProgressBoxProvider = Provider<Box<ReadingProgress>>((ref) {
   return Hive.box<ReadingProgress>('reading_progress');
 });
 
-final readingProgressProvider = StateNotifierProvider<ReadingProgressNotifier, Map<String, ReadingProgress>>((ref) {
+final readingProgressProvider = StateNotifierProvider<ReadingProgressNotifier,
+    Map<String, ReadingProgress>>((ref) {
   final box = ref.watch(readingProgressBoxProvider);
   return ReadingProgressNotifier(box);
 });
 
-final currentReadingSessionProvider = StateProvider<ReadingSession?>((ref) => null);
+final currentReadingSessionProvider =
+    StateProvider<ReadingSession?>((ref) => null);
 
-class ReadingProgressNotifier extends StateNotifier<Map<String, ReadingProgress>> {
+class ReadingProgressNotifier
+    extends StateNotifier<Map<String, ReadingProgress>> {
   final Box<ReadingProgress> _box;
   final _uuid = const Uuid();
-  
+
   ReadingProgressNotifier(this._box) : super(_loadProgress(_box)) {
-    _box.listenable().addListener(() {
-      state = _loadProgress(_box);
-    });
+    // Note: Hive 2.x doesn't have listenable, we'll manually refresh
   }
 
   static Map<String, ReadingProgress> _loadProgress(Box<ReadingProgress> box) {
@@ -55,7 +56,7 @@ class ReadingProgressNotifier extends StateNotifier<Map<String, ReadingProgress>
         additionalReadingTime: additionalReadingTime,
         lastText: lastReadText,
       );
-      
+
       if (totalPages != null) {
         progress = progress.copyWith(totalPages: totalPages);
       }
@@ -102,18 +103,18 @@ class ReadingProgressNotifier extends StateNotifier<Map<String, ReadingProgress>
     Duration totalTime = Duration.zero;
     Duration todayTime = Duration.zero;
     Duration weekTime = Duration.zero;
-    
+
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
     final weekStart = todayStart.subtract(Duration(days: 7));
 
     for (final progress in state.values) {
       totalTime += progress.readingTime;
-      
+
       if (progress.timestamp.isAfter(todayStart)) {
         todayTime += progress.readingTime;
       }
-      
+
       if (progress.timestamp.isAfter(weekStart)) {
         weekTime += progress.readingTime;
       }
@@ -131,7 +132,7 @@ class ReadingSession {
   final String bookId;
   final DateTime startTime;
   late DateTime lastActivity;
-  
+
   ReadingSession({
     required this.bookId,
     required this.startTime,

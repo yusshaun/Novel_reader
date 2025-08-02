@@ -40,7 +40,10 @@ class ReaderDrawer extends StatelessWidget {
                 Text(
                   '${chapters.length} chapters',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onPrimary
+                            .withOpacity(0.7),
                       ),
                 ),
               ],
@@ -52,7 +55,7 @@ class ReaderDrawer extends StatelessWidget {
               itemBuilder: (context, index) {
                 final chapter = chapters[index];
                 final isCurrentChapter = index == currentChapterIndex;
-                
+
                 return ListTile(
                   leading: CircleAvatar(
                     radius: 16,
@@ -70,7 +73,7 @@ class ReaderDrawer extends StatelessWidget {
                     ),
                   ),
                   title: Text(
-                    chapter.Title ?? 'Chapter ${index + 1}',
+                    chapter.Anchor?.split('#').last ?? 'Chapter ${index + 1}',
                     style: isCurrentChapter
                         ? TextStyle(
                             fontWeight: FontWeight.bold,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -10,31 +10,30 @@ import 'models/epub_book.dart';
 import 'models/bookshelf.dart';
 import 'models/reader_theme.dart';
 import 'models/reading_progress.dart';
-import 'providers/reading_progress_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp();
-  
+
+  // Initialize Firebase - commented out for Windows build
+  // await Firebase.initializeApp();
+
   // Initialize Hive
   await Hive.initFlutter();
-  
+
   // Register Hive adapters
   Hive.registerAdapter(EpubBookAdapter());
   Hive.registerAdapter(BookShelfAdapter());
   Hive.registerAdapter(ReaderThemeAdapter());
   Hive.registerAdapter(ReadingProgressAdapter());
-  
+
   // Open Hive boxes
   await Hive.openBox<EpubBook>('books');
   await Hive.openBox<BookShelf>('bookshelves');
   await Hive.openBox<ReaderTheme>('reader_theme');
   await Hive.openBox<ReadingProgress>('reading_progress');
-  
+
   final savedThemeMode = await AdaptiveTheme.getThemeMode();
-  
+
   runApp(
     ProviderScope(
       child: NovelReaderApp(savedThemeMode: savedThemeMode),
@@ -44,7 +43,7 @@ void main() async {
 
 class NovelReaderApp extends StatelessWidget {
   final AdaptiveThemeMode? savedThemeMode;
-  
+
   const NovelReaderApp({
     super.key,
     this.savedThemeMode,

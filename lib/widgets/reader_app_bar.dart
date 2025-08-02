@@ -91,7 +91,7 @@ class ReaderSettingsPanel extends ConsumerWidget {
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 24),
-          
+
           // Font Size Slider
           Consumer(
             builder: (context, ref, child) {
@@ -110,16 +110,18 @@ class ReaderSettingsPanel extends ConsumerWidget {
                     divisions: 20,
                     label: readerTheme.fontSize.round().toString(),
                     onChanged: (value) {
-                      ref.read(readerThemeProvider.notifier).updateFontSize(value);
+                      ref
+                          .read(readerThemeProvider.notifier)
+                          .updateFontSize(value);
                     },
                   ),
                 ],
               );
             },
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Font Family
           Consumer(
             builder: (context, ref, child) {
@@ -134,13 +136,16 @@ class ReaderSettingsPanel extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
-                    children: ReaderTheme.availableFonts.map((font) {
+                    children:
+                        ['System Default', 'Serif', 'Sans Serif'].map((font) {
                       return ChoiceChip(
                         label: Text(font),
                         selected: readerTheme.fontFamily == font,
                         onSelected: (selected) {
                           if (selected) {
-                            ref.read(readerThemeProvider.notifier).updateFontFamily(font);
+                            ref
+                                .read(readerThemeProvider.notifier)
+                                .updateFontFamily(font);
                           }
                         },
                       );
@@ -150,9 +155,9 @@ class ReaderSettingsPanel extends ConsumerWidget {
               );
             },
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Theme Toggle
           Consumer(
             builder: (context, ref, child) {
@@ -166,9 +171,9 @@ class ReaderSettingsPanel extends ConsumerWidget {
               );
             },
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           SizedBox(
             width: double.infinity,
             child: FilledButton(

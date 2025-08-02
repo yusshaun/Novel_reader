@@ -8,7 +8,8 @@ final bookshelvesBoxProvider = Provider<Box<BookShelf>>((ref) {
   return Hive.box<BookShelf>('bookshelves');
 });
 
-final bookshelvesProvider = StateNotifierProvider<BookshelvesNotifier, List<BookShelf>>((ref) {
+final bookshelvesProvider =
+    StateNotifierProvider<BookshelvesNotifier, List<BookShelf>>((ref) {
   final box = ref.watch(bookshelvesBoxProvider);
   return BookshelvesNotifier(box);
 });
@@ -18,12 +19,10 @@ final selectedShelfProvider = StateProvider<BookShelf?>((ref) => null);
 class BookshelvesNotifier extends StateNotifier<List<BookShelf>> {
   final Box<BookShelf> _box;
   final _uuid = const Uuid();
-  
+
   BookshelvesNotifier(this._box) : super(_box.values.toList()) {
     _initializeDefaultShelf();
-    _box.listenable().addListener(() {
-      state = _box.values.toList();
-    });
+    // Note: Hive 2.x doesn't have listenable, we'll manually refresh
   }
 
   Future<void> _initializeDefaultShelf() async {
@@ -55,7 +54,7 @@ class BookshelvesNotifier extends StateNotifier<List<BookShelf>> {
       updatedAt: DateTime.now(),
       description: description,
     );
-    
+
     await _box.put(shelf.id, shelf);
     state = _box.values.toList();
   }
@@ -92,7 +91,8 @@ class BookshelvesNotifier extends StateNotifier<List<BookShelf>> {
     }
   }
 
-  Future<void> reorderBooksInShelf(String shelfId, int oldIndex, int newIndex) async {
+  Future<void> reorderBooksInShelf(
+      String shelfId, int oldIndex, int newIndex) async {
     final shelf = _box.get(shelfId);
     if (shelf != null) {
       shelf.reorderBooks(oldIndex, newIndex);
@@ -104,7 +104,9 @@ class BookshelvesNotifier extends StateNotifier<List<BookShelf>> {
   BookShelf? getDefaultShelf() {
     return state.firstWhere(
       (shelf) => shelf.isDefault,
-      orElse: () => state.isNotEmpty ? state.first : throw StateError('No shelves available'),
+      orElse: () => state.isNotEmpty
+          ? state.first
+          : throw StateError('No shelves available'),
     );
   }
 

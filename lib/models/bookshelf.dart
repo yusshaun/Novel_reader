@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'epub_book.dart';
 
 part 'bookshelf.g.dart';
 
@@ -8,30 +7,30 @@ part 'bookshelf.g.dart';
 class BookShelf extends HiveObject {
   @HiveField(0)
   String id;
-  
+
   @HiveField(1)
   String shelfName;
-  
+
   @HiveField(2)
   List<String> bookIds;
-  
+
   @HiveField(3)
   int themeColorValue;
-  
+
   @HiveField(4)
   DateTime createdAt;
-  
+
   @HiveField(5)
   DateTime updatedAt;
-  
+
   @HiveField(6)
   String? description;
-  
+
   @HiveField(7)
   bool isDefault;
 
   Color get themeColor => Color(themeColorValue);
-  
+
   set themeColor(Color color) {
     themeColorValue = color.value;
   }

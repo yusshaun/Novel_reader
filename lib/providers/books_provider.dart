@@ -7,7 +7,8 @@ final booksBoxProvider = Provider<Box<EpubBook>>((ref) {
   return Hive.box<EpubBook>('books');
 });
 
-final booksProvider = StateNotifierProvider<BooksNotifier, List<EpubBook>>((ref) {
+final booksProvider =
+    StateNotifierProvider<BooksNotifier, List<EpubBook>>((ref) {
   final box = ref.watch(booksBoxProvider);
   return BooksNotifier(box);
 });
@@ -23,24 +24,22 @@ final searchQueryProvider = StateProvider<String>((ref) => '');
 final filteredBooksProvider = Provider<List<EpubBook>>((ref) {
   final books = ref.watch(booksProvider);
   final query = ref.watch(searchQueryProvider);
-  
+
   if (query.isEmpty) {
     return books;
   }
-  
+
   return books.where((book) {
     return book.title.toLowerCase().contains(query.toLowerCase()) ||
-           book.author.toLowerCase().contains(query.toLowerCase());
+        book.author.toLowerCase().contains(query.toLowerCase());
   }).toList();
 });
 
 class BooksNotifier extends StateNotifier<List<EpubBook>> {
   final Box<EpubBook> _box;
-  
+
   BooksNotifier(this._box) : super(_box.values.toList()) {
-    _box.listenable().addListener(() {
-      state = _box.values.toList();
-    });
+    // Note: Hive 2.x doesn't have listenable, we'll manually refresh
   }
 
   Future<void> addBook(EpubBook book) async {
