@@ -1,0 +1,6 @@
+flutter:
+  compiler:
+    - enablePrecompilation: false
+
+dart:
+  enable_debug_mode: true
