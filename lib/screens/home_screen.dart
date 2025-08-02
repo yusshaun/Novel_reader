@@ -521,7 +521,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   title: const Text('編輯書架'),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: 實現編輯書架功能
+                    _showEditShelfDialog(shelf);
                   },
                 ),
                 ListTile(
@@ -675,6 +675,214 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         );
       }
     }
+  }
+
+  void _showEditShelfDialog(dynamic shelf) {
+    final TextEditingController nameController = 
+        TextEditingController(text: shelf.shelfName);
+    final TextEditingController descriptionController = 
+        TextEditingController(text: shelf.description ?? '');
+    Color selectedColor = Color(shelf.themeColorValue);
+
+    // 預設顏色選項
+    final List<Color> colorOptions = [
+      Colors.blue,
+      Colors.green,
+      Colors.purple,
+      Colors.orange,
+      Colors.red,
+      Colors.teal,
+      Colors.indigo,
+      Colors.pink,
+      Colors.amber,
+      Colors.cyan,
+      Colors.lime,
+      Colors.deepPurple,
+    ];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  Icon(
+                    Icons.edit,
+                    color: selectedColor,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('編輯書架'),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 書架名稱
+                    const Text(
+                      '書架名稱',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        hintText: '輸入書架名稱',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: const Icon(Icons.library_books),
+                      ),
+                      maxLength: 20,
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // 書架描述
+                    const Text(
+                      '書架描述（選填）',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(
+                        hintText: '輸入書架描述',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: const Icon(Icons.description),
+                      ),
+                      maxLines: 2,
+                      maxLength: 100,
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // 主題顏色
+                    const Text(
+                      '主題顏色',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: colorOptions.map((color) {
+                          final isSelected = color.value == selectedColor.value;
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedColor = color;
+                              });
+                            },
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected ? Colors.black : Colors.grey.shade300,
+                                  width: isSelected ? 3 : 1,
+                                ),
+                                boxShadow: isSelected ? [
+                                  BoxShadow(
+                                    color: color.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  ),
+                                ] : null,
+                              ),
+                              child: isSelected 
+                                ? const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 20,
+                                  )
+                                : null,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    '取消',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('請輸入書架名稱'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    final updatedShelf = shelf.copyWith(
+                      shelfName: name,
+                      description: descriptionController.text.trim().isEmpty 
+                          ? null 
+                          : descriptionController.text.trim(),
+                      themeColorValue: selectedColor.value,
+                      updatedAt: DateTime.now(),
+                    );
+
+                    await ref.read(bookshelvesProvider.notifier).updateShelf(updatedShelf);
+                    
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('書架「$name」已更新'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('保存'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildRecentTab() {

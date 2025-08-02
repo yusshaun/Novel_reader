@@ -20,6 +20,9 @@ class BookshelfDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
+  bool _isEditMode = false;
+  List<String> _selectedBooks = [];
+  
   void _openBook(String bookId) {
     final books = ref.read(booksProvider);
     final book = books.firstWhere((b) => b.id == bookId);
@@ -59,12 +62,40 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                   margin: const EdgeInsets.only(right: 8),
                   child: const Icon(Icons.star, color: Colors.amber),
                 ),
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () {
-                  _showEditShelfDialog();
-                },
-              ),
+              if (_isEditMode) ...[
+                IconButton(
+                  icon: const Icon(Icons.select_all),
+                  onPressed: _selectAllBooks,
+                  tooltip: '全選',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: _selectedBooks.isNotEmpty ? _removeSelectedBooks : null,
+                  tooltip: '移除選中的書籍',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _exitEditMode,
+                  tooltip: '退出編輯模式',
+                ),
+              ] else ...[
+                IconButton(
+                  icon: const Icon(Icons.sort),
+                  onPressed: () {
+                    setState(() {
+                      _isEditMode = true;
+                    });
+                  },
+                  tooltip: '編輯書籍',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () {
+                    _showEditShelfDialog();
+                  },
+                  tooltip: '編輯書架',
+                ),
+              ],
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
@@ -215,8 +246,8 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddBookDialog,
+      floatingActionButton: _isEditMode ? null : FloatingActionButton.extended(
+        onPressed: _showAddBooksDialog,
         backgroundColor: Color(widget.bookshelf.themeColorValue),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
@@ -226,75 +257,132 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
   }
 
   Widget _buildBookCard(EpubBook book) {
+    final isSelected = _selectedBooks.contains(book.id);
+    
     return GestureDetector(
-      onTap: () => _openBook(book.id),
-      onLongPress: () => _showBookOptions(book),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 書籍封面
-            Expanded(
-              flex: 3,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(12)),
-                  color: Colors.grey[200],
+      onTap: () {
+        if (_isEditMode) {
+          setState(() {
+            if (isSelected) {
+              _selectedBooks.remove(book.id);
+            } else {
+              _selectedBooks.add(book.id);
+            }
+          });
+        } else {
+          _openBook(book.id);
+        }
+      },
+      onLongPress: () {
+        if (!_isEditMode) {
+          _showBookOptions(book);
+        }
+      },
+      child: Stack(
+        children: [
+          Card(
+            elevation: _isEditMode && isSelected ? 8 : 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: _isEditMode && isSelected 
+                ? BorderSide(
+                    color: Color(widget.bookshelf.themeColorValue),
+                    width: 2,
+                  )
+                : BorderSide.none,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 書籍封面
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(12)),
+                      color: Colors.grey[200],
+                    ),
+                    child: book.coverImage != null
+                        ? ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(12)),
+                            child: Image.memory(
+                              book.coverImage!,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.book,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
+                  ),
                 ),
-                child: book.coverImage != null
-                    ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(12)),
-                        child: Image.memory(
-                          book.coverImage!,
-                          fit: BoxFit.cover,
+                // 書籍信息
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          book.title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      )
-                    : const Icon(
-                        Icons.book,
-                        size: 48,
-                        color: Colors.grey,
-                      ),
-              ),
-            ),
-            // 書籍信息
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      book.title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 4),
+                        Text(
+                          book.author,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      book.author,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                  ),
                 ),
+              ],
+            ),
+          ),
+          // 選擇指示器
+          if (_isEditMode)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected 
+                    ? Color(widget.bookshelf.themeColorValue)
+                    : Colors.white,
+                  border: Border.all(
+                    color: isSelected 
+                      ? Color(widget.bookshelf.themeColorValue)
+                      : Colors.grey.shade400,
+                    width: 2,
+                  ),
+                ),
+                child: isSelected
+                  ? const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 16,
+                    )
+                  : null,
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -341,60 +429,6 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
               SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  void _showAddBookDialog() {
-    final allBooks = ref.read(booksProvider);
-    final availableBooks = allBooks
-        .where((book) => !widget.bookshelf.bookIds.contains(book.id))
-        .toList();
-
-    if (availableBooks.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('所有書籍都已在此書架中'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('添加書籍到書架'),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 300,
-            child: ListView.builder(
-              itemCount: availableBooks.length,
-              itemBuilder: (context, index) {
-                final book = availableBooks[index];
-                return ListTile(
-                  leading: book.coverImage != null
-                      ? Image.memory(book.coverImage!,
-                          width: 40, height: 60, fit: BoxFit.cover)
-                      : const Icon(Icons.book),
-                  title: Text(book.title),
-                  subtitle: Text(book.author),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _addBookToShelf(book);
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
-            ),
-          ],
         );
       },
     );
@@ -453,12 +487,486 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
   }
 
   void _showEditShelfDialog() {
-    // TODO: 實現編輯書架功能
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('編輯書架功能待實現'),
-        backgroundColor: Colors.blue,
-      ),
+    final TextEditingController nameController = 
+        TextEditingController(text: widget.bookshelf.shelfName);
+    final TextEditingController descriptionController = 
+        TextEditingController(text: widget.bookshelf.description ?? '');
+    Color selectedColor = Color(widget.bookshelf.themeColorValue);
+
+    // 預設顏色選項
+    final List<Color> colorOptions = [
+      Colors.blue,
+      Colors.green,
+      Colors.purple,
+      Colors.orange,
+      Colors.red,
+      Colors.teal,
+      Colors.indigo,
+      Colors.pink,
+      Colors.amber,
+      Colors.cyan,
+      Colors.lime,
+      Colors.deepPurple,
+    ];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  Icon(
+                    Icons.edit,
+                    color: selectedColor,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('編輯書架'),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 書架名稱
+                    const Text(
+                      '書架名稱',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        hintText: '輸入書架名稱',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: const Icon(Icons.library_books),
+                      ),
+                      maxLength: 20,
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // 書架描述
+                    const Text(
+                      '書架描述（選填）',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(
+                        hintText: '輸入書架描述',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: const Icon(Icons.description),
+                      ),
+                      maxLines: 2,
+                      maxLength: 100,
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // 主題顏色
+                    const Text(
+                      '主題顏色',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: colorOptions.map((color) {
+                          final isSelected = color.value == selectedColor.value;
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedColor = color;
+                              });
+                            },
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected ? Colors.black : Colors.grey.shade300,
+                                  width: isSelected ? 3 : 1,
+                                ),
+                                boxShadow: isSelected ? [
+                                  BoxShadow(
+                                    color: color.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  ),
+                                ] : null,
+                              ),
+                              child: isSelected 
+                                ? const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 18,
+                                  )
+                                : null,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    '取消',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('請輸入書架名稱'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    final updatedShelf = widget.bookshelf.copyWith(
+                      shelfName: name,
+                      description: descriptionController.text.trim().isEmpty 
+                          ? null 
+                          : descriptionController.text.trim(),
+                      themeColorValue: selectedColor.value,
+                      updatedAt: DateTime.now(),
+                    );
+
+                    await ref.read(bookshelvesProvider.notifier).updateShelf(updatedShelf);
+                    
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('書架「$name」已更新'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    
+                    // 更新當前頁面
+                    setState(() {});
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('保存'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
+  }
+
+  void _selectAllBooks() {
+    final booksInShelf = _getBooksInShelf();
+    setState(() {
+      if (_selectedBooks.length == booksInShelf.length) {
+        _selectedBooks.clear();
+      } else {
+        _selectedBooks = booksInShelf.map((book) => book.id).toList();
+      }
+    });
+  }
+
+  void _exitEditMode() {
+    setState(() {
+      _isEditMode = false;
+      _selectedBooks.clear();
+    });
+  }
+
+  void _removeSelectedBooks() {
+    if (_selectedBooks.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('移除書籍'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('確定要從書架中移除 ${_selectedBooks.length} 本書籍嗎？'),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.orange.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.orange[700],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '書籍將從此書架中移除，但不會被刪除',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                '取消',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _performRemoveBooks();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('移除'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _performRemoveBooks() async {
+    try {
+      final bookshelvesNotifier = ref.read(bookshelvesProvider.notifier);
+      
+      for (final bookId in _selectedBooks) {
+        await bookshelvesNotifier.removeBookFromShelf(widget.bookshelf.id, bookId);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('已從書架中移除 ${_selectedBooks.length} 本書籍'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      _exitEditMode();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('移除失敗：$e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showAddBooksDialog() {
+    // 獲取不在當前書架中的所有書籍
+    final allBooks = ref.read(booksProvider);
+    final availableBooks = allBooks
+        .where((book) => !widget.bookshelf.bookIds.contains(book.id))
+        .toList();
+
+    if (availableBooks.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('沒有可添加的書籍'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    List<String> selectedBooksToAdd = [];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text('添加書籍到書架'),
+              content: Container(
+                width: double.maxFinite,
+                height: 400,
+                child: Column(
+                  children: [
+                    Text(
+                      '選擇要添加到「${widget.bookshelf.shelfName}」的書籍：',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: availableBooks.length,
+                        itemBuilder: (context, index) {
+                          final book = availableBooks[index];
+                          final isSelected = selectedBooksToAdd.contains(book.id);
+                          
+                          return CheckboxListTile(
+                            value: isSelected,
+                            onChanged: (value) {
+                              setState(() {
+                                if (value == true) {
+                                  selectedBooksToAdd.add(book.id);
+                                } else {
+                                  selectedBooksToAdd.remove(book.id);
+                                }
+                              });
+                            },
+                            title: Text(
+                              book.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              book.author,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            secondary: book.coverImage != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Image.memory(
+                                    book.coverImage!,
+                                    width: 40,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Container(
+                                  width: 40,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Icon(Icons.book, color: Colors.grey),
+                                ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    '取消',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: selectedBooksToAdd.isNotEmpty
+                    ? () async {
+                        Navigator.pop(context);
+                        await _performAddBooks(selectedBooksToAdd);
+                      }
+                    : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(widget.bookshelf.themeColorValue),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text('添加 (${selectedBooksToAdd.length})'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _performAddBooks(List<String> bookIds) async {
+    try {
+      final bookshelvesNotifier = ref.read(bookshelvesProvider.notifier);
+      
+      for (final bookId in bookIds) {
+        await bookshelvesNotifier.addBookToShelf(widget.bookshelf.id, bookId);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('已添加 ${bookIds.length} 本書籍到書架'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('添加失敗：$e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
