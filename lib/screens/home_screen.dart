@@ -278,9 +278,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.85,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.1,
       ),
       itemCount: bookshelves.length,
       itemBuilder: (context, index) {
@@ -303,14 +303,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       },
       onLongPress: () => _showShelfOptions(shelf),
       child: Card(
-        elevation: 8,
-        shadowColor: Color(shelf.themeColorValue).withOpacity(0.3),
+        elevation: 4,
+        shadowColor: Color(shelf.themeColorValue).withOpacity(0.2),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -324,11 +324,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             children: [
               // 背景裝飾圖案
               Positioned(
-                top: -20,
-                right: -20,
+                top: -15,
+                right: -15,
                 child: Container(
-                  width: 80,
-                  height: 80,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white.withOpacity(0.1),
@@ -336,11 +336,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
               ),
               Positioned(
-                bottom: -10,
-                left: -10,
+                bottom: -8,
+                left: -8,
                 child: Container(
-                  width: 40,
-                  height: 40,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white.withOpacity(0.05),
@@ -349,7 +349,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
               // 主要內容
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -358,14 +358,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
                             Icons.library_books,
-                            size: 28,
+                            size: 24,
                             color: Colors.white,
                           ),
                         ),
@@ -392,27 +392,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     Text(
                       shelf.shelfName,
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     // 書籍數量
                     Consumer(
                       builder: (context, ref, child) {
                         return Text(
                           '${shelf.bookIds.length} 本書',
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             color: Colors.white70,
                           ),
                         );
                       },
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     // 默認標籤
                     if (shelf.isDefault)
                       Container(
