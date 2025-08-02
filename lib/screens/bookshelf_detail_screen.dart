@@ -818,14 +818,27 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
 
   Future<void> _updateBookCover(EpubBook book) async {
     try {
+      debugPrint('開始選擇封面圖片...');
       final newCoverData =
           await CoverImageService.showImagePickerDialog(context);
 
+      debugPrint('圖片選擇結果: ${newCoverData != null ? '成功' : '失敗'}');
+      if (newCoverData != null) {
+        debugPrint('圖片大小: ${newCoverData.length} bytes');
+        debugPrint('圖片數據哈希: ${newCoverData.hashCode}');
+      }
+
       if (newCoverData != null && mounted) {
+        debugPrint('開始更新書籍封面...');
         // 更新書籍封面
         final updatedBook = book.copyWith(coverImage: newCoverData);
         await ref.read(booksProvider.notifier).updateBook(updatedBook);
 
+        debugPrint('封面更新完成');
+        
+        // 強制刷新UI
+        setState(() {});
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -835,8 +848,17 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
             ),
           );
         }
+      } else if (newCoverData == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('未選擇圖片'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
+      debugPrint('更新封面時發生錯誤: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -854,6 +876,9 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
       // 移除書籍封面
       final updatedBook = book.copyWith(clearCoverImage: true);
       await ref.read(booksProvider.notifier).updateBook(updatedBook);
+
+      // 強制刷新UI
+      setState(() {});
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

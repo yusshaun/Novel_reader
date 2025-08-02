@@ -8,18 +8,26 @@ class CoverImageService {
   /// 從文件選擇圖片
   static Future<Uint8List?> pickImageFromFile() async {
     try {
+      debugPrint('開始文件選擇...');
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         allowMultiple: false,
       );
 
+      debugPrint('文件選擇結果: ${result != null ? '成功' : '失敗'}');
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
+        debugPrint('選擇的文件: ${file.name}, 大小: ${file.size} bytes');
+        
         if (file.path != null) {
+          debugPrint('使用文件路徑處理圖片: ${file.path}');
           return await _processImage(file.path!);
         } else if (file.bytes != null) {
+          debugPrint('使用字節數據處理圖片');
           return await _processImageBytes(file.bytes!);
         }
+      } else {
+        debugPrint('未選擇任何文件');
       }
     } catch (e) {
       debugPrint('Error picking image from file: $e');
@@ -41,9 +49,12 @@ class CoverImageService {
   /// 處理圖片字節數據（壓縮和調整大小）
   static Future<Uint8List?> _processImageBytes(Uint8List bytes) async {
     try {
+      debugPrint('開始處理圖片字節數據，原始大小: ${bytes.length} bytes');
       final image = img.decodeImage(bytes);
 
       if (image != null) {
+        debugPrint('圖片解碼成功，原始尺寸: ${image.width}x${image.height}');
+        
         // 計算新的尺寸，保持書籍封面的比例 (約 2:3)
         int newWidth = 400;
         int newHeight = 600;
@@ -58,12 +69,16 @@ class CoverImageService {
           newHeight = (newWidth / aspectRatio).round();
         }
 
+        debugPrint('調整後尺寸: ${newWidth}x${newHeight}');
+
         // 調整圖片大小
         final resized = img.copyResize(
           image,
           width: newWidth,
           height: newHeight,
         );
+
+        debugPrint('圖片縮放完成: ${resized.width}x${resized.height}');
 
         // 如果需要裁剪到標準比例
         final cropped = img.copyCrop(
@@ -74,9 +89,14 @@ class CoverImageService {
           600,
         );
 
+        debugPrint('圖片裁剪完成: ${cropped.width}x${cropped.height}');
+
         // 壓縮圖片
         final compressed = img.encodeJpg(cropped, quality: 85);
+        debugPrint('圖片壓縮完成，最終大小: ${compressed.length} bytes');
         return Uint8List.fromList(compressed);
+      } else {
+        debugPrint('圖片解碼失敗');
       }
     } catch (e) {
       debugPrint('Error processing image bytes: $e');
@@ -139,13 +159,13 @@ class CoverImageService {
                 title: const Text('從文件選擇'),
                 subtitle: const Text('瀏覽文件夾選擇圖片'),
                 onTap: () async {
-                  Navigator.pop(context);
                   try {
                     final imageData = await pickImageFromFile();
                     if (context.mounted) {
                       if (imageData != null) {
                         Navigator.pop(context, imageData);
                       } else {
+                        Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('未選擇圖片或圖片處理失敗'),
@@ -156,6 +176,7 @@ class CoverImageService {
                     }
                   } catch (e) {
                     if (context.mounted) {
+                      Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('選擇圖片時發生錯誤：$e'),
