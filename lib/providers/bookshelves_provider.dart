@@ -60,8 +60,7 @@ class BookshelvesNotifier extends StateNotifier<List<BookShelf>> {
   }
 
   Future<void> updateShelf(BookShelf shelf) async {
-    final updatedShelf = shelf.copyWith(updatedAt: DateTime.now());
-    await _box.put(shelf.id, updatedShelf);
+    await _box.put(shelf.id, shelf);
     state = _box.values.toList();
   }
 

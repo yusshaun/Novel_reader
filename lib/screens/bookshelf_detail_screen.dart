@@ -21,8 +21,9 @@ class BookshelfDetailScreen extends ConsumerStatefulWidget {
 
 class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
   bool _isEditMode = false;
+  bool _isSortMode = false;
   List<String> _selectedBooks = [];
-  
+
   void _openBook(String bookId) {
     final books = ref.read(booksProvider);
     final book = books.firstWhere((b) => b.id == bookId);
@@ -36,14 +37,31 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
 
   List<EpubBook> _getBooksInShelf() {
     final allBooks = ref.watch(booksProvider);
-    return allBooks
-        .where((book) => widget.bookshelf.bookIds.contains(book.id))
+    final currentShelf = _getCurrentShelf();
+
+    final booksMap = {for (var book in allBooks) book.id: book};
+
+    // 按照書架中 bookIds 的順序返回書籍
+    return currentShelf.bookIds
+        .where((bookId) => booksMap.containsKey(bookId))
+        .map((bookId) => booksMap[bookId]!)
         .toList();
+  }
+
+  BookShelf _getCurrentShelf() {
+    final bookshelves = ref.watch(bookshelvesProvider);
+
+    // 從 provider 中獲取最新的書架數據
+    return bookshelves.firstWhere(
+      (shelf) => shelf.id == widget.bookshelf.id,
+      orElse: () => widget.bookshelf,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final booksInShelf = _getBooksInShelf();
+    final currentShelf = _getCurrentShelf();
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -54,10 +72,10 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
             expandedHeight: 200,
             floating: false,
             pinned: true,
-            backgroundColor: Color(widget.bookshelf.themeColorValue),
+            backgroundColor: Color(currentShelf.themeColorValue),
             foregroundColor: Colors.white,
             actions: [
-              if (widget.bookshelf.isDefault)
+              if (currentShelf.isDefault)
                 Container(
                   margin: const EdgeInsets.only(right: 8),
                   child: const Icon(Icons.star, color: Colors.amber),
@@ -70,7 +88,8 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
-                  onPressed: _selectedBooks.isNotEmpty ? _removeSelectedBooks : null,
+                  onPressed:
+                      _selectedBooks.isNotEmpty ? _removeSelectedBooks : null,
                   tooltip: '移除選中的書籍',
                 ),
                 IconButton(
@@ -78,7 +97,22 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                   onPressed: _exitEditMode,
                   tooltip: '退出編輯模式',
                 ),
+              ] else if (_isSortMode) ...[
+                IconButton(
+                  icon: const Icon(Icons.check),
+                  onPressed: _exitSortMode,
+                  tooltip: '完成排序',
+                ),
               ] else ...[
+                IconButton(
+                  icon: const Icon(Icons.swap_vert),
+                  onPressed: () {
+                    setState(() {
+                      _isSortMode = true;
+                    });
+                  },
+                  tooltip: '排序書籍',
+                ),
                 IconButton(
                   icon: const Icon(Icons.sort),
                   onPressed: () {
@@ -104,8 +138,8 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(widget.bookshelf.themeColorValue),
-                      Color(widget.bookshelf.themeColorValue).withOpacity(0.8),
+                      Color(currentShelf.themeColorValue),
+                      Color(currentShelf.themeColorValue).withOpacity(0.8),
                     ],
                   ),
                 ),
@@ -164,7 +198,7 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      widget.bookshelf.shelfName,
+                                      currentShelf.shelfName,
                                       style: const TextStyle(
                                         fontSize: 24,
                                         fontWeight: FontWeight.bold,
@@ -227,38 +261,239 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                       ),
                     ),
                   )
-                : SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 0.7,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final book = booksInShelf[index];
-                        return _buildBookCard(book);
-                      },
-                      childCount: booksInShelf.length,
-                    ),
-                  ),
+                : _isSortMode
+                    ? SliverToBoxAdapter(
+                        child: _buildSortableBookList(booksInShelf),
+                      )
+                    : SliverGrid(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.7,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final book = booksInShelf[index];
+                            return _buildBookCard(book);
+                          },
+                          childCount: booksInShelf.length,
+                        ),
+                      ),
           ),
         ],
       ),
-      floatingActionButton: _isEditMode ? null : FloatingActionButton.extended(
-        onPressed: _showAddBooksDialog,
-        backgroundColor: Color(widget.bookshelf.themeColorValue),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('添加書籍'),
+      floatingActionButton: (_isEditMode || _isSortMode)
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _showAddBooksDialog,
+              backgroundColor: Color(currentShelf.themeColorValue),
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text('添加書籍'),
+            ),
+    );
+  }
+
+  Widget _buildSortableBookList(List<EpubBook> books) {
+    final currentShelf = _getCurrentShelf();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Color(currentShelf.themeColorValue).withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.swap_vert,
+                color: Color(currentShelf.themeColorValue),
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '拖拽排序模式',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(currentShelf.themeColorValue),
+                      ),
+                    ),
+                    Text(
+                      '長按並拖拽書籍來重新排序',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Color(currentShelf.themeColorValue).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${books.length} 本書',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(currentShelf.themeColorValue),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: books.length,
+            onReorder: _onBookReorder,
+            itemBuilder: (context, index) {
+              final book = books[index];
+              return _buildSortableBookItem(book, index);
+            },
+          ),
+        ],
       ),
     );
   }
 
+  Widget _buildSortableBookItem(EpubBook book, int index) {
+    return Container(
+      key: ValueKey(book.id),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.all(12),
+          leading: Container(
+            width: 50,
+            height: 70,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.grey[200],
+            ),
+            child: book.coverImage != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      book.coverImage!,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : const Icon(
+                    Icons.book,
+                    size: 32,
+                    color: Colors.grey,
+                  ),
+          ),
+          title: Text(
+            book.title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            book.author,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.drag_handle,
+                color: Colors.grey[600],
+                size: 24,
+              ),
+              Text(
+                '${index + 1}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          onTap: () => _openBook(book.id),
+        ),
+      ),
+    );
+  }
+
+  void _onBookReorder(int oldIndex, int newIndex) async {
+    try {
+      // 獲取當前最新的書架數據
+      final currentShelf = _getCurrentShelf();
+
+      // 創建 bookIds 的副本來重新排序
+      final reorderedBookIds = List<String>.from(currentShelf.bookIds);
+
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final bookId = reorderedBookIds.removeAt(oldIndex);
+      reorderedBookIds.insert(newIndex, bookId);
+
+      // 創建更新後的書架副本
+      final updatedShelf = currentShelf.copyWith(
+        bookIds: reorderedBookIds,
+        updatedAt: DateTime.now(),
+      );
+
+      // 更新資料庫
+      await ref.read(bookshelvesProvider.notifier).updateShelf(updatedShelf);
+
+      // 顯示成功提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('書籍順序已更新'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('排序失敗：$e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Widget _buildBookCard(EpubBook book) {
     final isSelected = _selectedBooks.contains(book.id);
-    
+    final currentShelf = _getCurrentShelf();
+
     return GestureDetector(
       onTap: () {
         if (_isEditMode) {
@@ -284,12 +519,12 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
             elevation: _isEditMode && isSelected ? 8 : 4,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: _isEditMode && isSelected 
-                ? BorderSide(
-                    color: Color(widget.bookshelf.themeColorValue),
-                    width: 2,
-                  )
-                : BorderSide.none,
+              side: _isEditMode && isSelected
+                  ? BorderSide(
+                      color: Color(currentShelf.themeColorValue),
+                      width: 2,
+                    )
+                  : BorderSide.none,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -363,23 +598,23 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                 height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected 
-                    ? Color(widget.bookshelf.themeColorValue)
-                    : Colors.white,
+                  color: isSelected
+                      ? Color(currentShelf.themeColorValue)
+                      : Colors.white,
                   border: Border.all(
-                    color: isSelected 
-                      ? Color(widget.bookshelf.themeColorValue)
-                      : Colors.grey.shade400,
+                    color: isSelected
+                        ? Color(currentShelf.themeColorValue)
+                        : Colors.grey.shade400,
                     width: 2,
                   ),
                 ),
                 child: isSelected
-                  ? const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 16,
-                    )
-                  : null,
+                    ? const Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: 16,
+                      )
+                    : null,
               ),
             ),
         ],
@@ -487,9 +722,9 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
   }
 
   void _showEditShelfDialog() {
-    final TextEditingController nameController = 
+    final TextEditingController nameController =
         TextEditingController(text: widget.bookshelf.shelfName);
-    final TextEditingController descriptionController = 
+    final TextEditingController descriptionController =
         TextEditingController(text: widget.bookshelf.description ?? '');
     Color selectedColor = Color(widget.bookshelf.themeColorValue);
 
@@ -554,7 +789,7 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                       maxLength: 20,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // 書架描述
                     const Text(
                       '書架描述（選填）',
@@ -577,7 +812,7 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                       maxLength: 100,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // 主題顏色
                     const Text(
                       '主題顏色',
@@ -611,24 +846,28 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                                 color: color,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: isSelected ? Colors.black : Colors.grey.shade300,
+                                  color: isSelected
+                                      ? Colors.black
+                                      : Colors.grey.shade300,
                                   width: isSelected ? 3 : 1,
                                 ),
-                                boxShadow: isSelected ? [
-                                  BoxShadow(
-                                    color: color.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
-                                ] : null,
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: color.withOpacity(0.3),
+                                          blurRadius: 8,
+                                          spreadRadius: 2,
+                                        ),
+                                      ]
+                                    : null,
                               ),
-                              child: isSelected 
-                                ? const Icon(
-                                    Icons.check,
-                                    color: Colors.white,
-                                    size: 18,
-                                  )
-                                : null,
+                              child: isSelected
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 18,
+                                    )
+                                  : null,
                             ),
                           );
                         }).toList(),
@@ -660,15 +899,17 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
 
                     final updatedShelf = widget.bookshelf.copyWith(
                       shelfName: name,
-                      description: descriptionController.text.trim().isEmpty 
-                          ? null 
+                      description: descriptionController.text.trim().isEmpty
+                          ? null
                           : descriptionController.text.trim(),
                       themeColorValue: selectedColor.value,
                       updatedAt: DateTime.now(),
                     );
 
-                    await ref.read(bookshelvesProvider.notifier).updateShelf(updatedShelf);
-                    
+                    await ref
+                        .read(bookshelvesProvider.notifier)
+                        .updateShelf(updatedShelf);
+
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -676,7 +917,7 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                         backgroundColor: Colors.green,
                       ),
                     );
-                    
+
                     // 更新當前頁面
                     setState(() {});
                   },
@@ -712,6 +953,12 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
     setState(() {
       _isEditMode = false;
       _selectedBooks.clear();
+    });
+  }
+
+  void _exitSortMode() {
+    setState(() {
+      _isSortMode = false;
     });
   }
 
@@ -795,9 +1042,10 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
   Future<void> _performRemoveBooks() async {
     try {
       final bookshelvesNotifier = ref.read(bookshelvesProvider.notifier);
-      
+
       for (final bookId in _selectedBooks) {
-        await bookshelvesNotifier.removeBookFromShelf(widget.bookshelf.id, bookId);
+        await bookshelvesNotifier.removeBookFromShelf(
+            widget.bookshelf.id, bookId);
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -865,8 +1113,9 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                         itemCount: availableBooks.length,
                         itemBuilder: (context, index) {
                           final book = availableBooks[index];
-                          final isSelected = selectedBooksToAdd.contains(book.id);
-                          
+                          final isSelected =
+                              selectedBooksToAdd.contains(book.id);
+
                           return CheckboxListTile(
                             value: isSelected,
                             onChanged: (value) {
@@ -889,24 +1138,25 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             secondary: book.coverImage != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: Image.memory(
-                                    book.coverImage!,
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: Image.memory(
+                                      book.coverImage!,
+                                      width: 40,
+                                      height: 60,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : Container(
                                     width: 40,
                                     height: 60,
-                                    fit: BoxFit.cover,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[300],
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Icon(Icons.book,
+                                        color: Colors.grey),
                                   ),
-                                )
-                              : Container(
-                                  width: 40,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[300],
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Icon(Icons.book, color: Colors.grey),
-                                ),
                           );
                         },
                       ),
@@ -924,11 +1174,11 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                 ),
                 ElevatedButton(
                   onPressed: selectedBooksToAdd.isNotEmpty
-                    ? () async {
-                        Navigator.pop(context);
-                        await _performAddBooks(selectedBooksToAdd);
-                      }
-                    : null,
+                      ? () async {
+                          Navigator.pop(context);
+                          await _performAddBooks(selectedBooksToAdd);
+                        }
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color(widget.bookshelf.themeColorValue),
                     foregroundColor: Colors.white,
@@ -949,7 +1199,7 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
   Future<void> _performAddBooks(List<String> bookIds) async {
     try {
       final bookshelvesNotifier = ref.read(bookshelvesProvider.notifier);
-      
+
       for (final bookId in bookIds) {
         await bookshelvesNotifier.addBookToShelf(widget.bookshelf.id, bookId);
       }

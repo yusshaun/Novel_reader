@@ -678,9 +678,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   void _showEditShelfDialog(dynamic shelf) {
-    final TextEditingController nameController = 
+    final TextEditingController nameController =
         TextEditingController(text: shelf.shelfName);
-    final TextEditingController descriptionController = 
+    final TextEditingController descriptionController =
         TextEditingController(text: shelf.description ?? '');
     Color selectedColor = Color(shelf.themeColorValue);
 
@@ -745,7 +745,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       maxLength: 20,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // 書架描述
                     const Text(
                       '書架描述（選填）',
@@ -768,7 +768,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       maxLength: 100,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // 主題顏色
                     const Text(
                       '主題顏色',
@@ -802,24 +802,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 color: color,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: isSelected ? Colors.black : Colors.grey.shade300,
+                                  color: isSelected
+                                      ? Colors.black
+                                      : Colors.grey.shade300,
                                   width: isSelected ? 3 : 1,
                                 ),
-                                boxShadow: isSelected ? [
-                                  BoxShadow(
-                                    color: color.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
-                                ] : null,
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: color.withOpacity(0.3),
+                                          blurRadius: 8,
+                                          spreadRadius: 2,
+                                        ),
+                                      ]
+                                    : null,
                               ),
-                              child: isSelected 
-                                ? const Icon(
-                                    Icons.check,
-                                    color: Colors.white,
-                                    size: 20,
-                                  )
-                                : null,
+                              child: isSelected
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 20,
+                                    )
+                                  : null,
                             ),
                           );
                         }).toList(),
@@ -851,15 +855,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                     final updatedShelf = shelf.copyWith(
                       shelfName: name,
-                      description: descriptionController.text.trim().isEmpty 
-                          ? null 
+                      description: descriptionController.text.trim().isEmpty
+                          ? null
                           : descriptionController.text.trim(),
                       themeColorValue: selectedColor.value,
                       updatedAt: DateTime.now(),
                     );
 
-                    await ref.read(bookshelvesProvider.notifier).updateShelf(updatedShelf);
-                    
+                    await ref
+                        .read(bookshelvesProvider.notifier)
+                        .updateShelf(updatedShelf);
+
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
