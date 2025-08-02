@@ -4,6 +4,7 @@ import '../models/bookshelf.dart';
 import '../models/epub_book.dart';
 import '../providers/books_provider.dart';
 import '../providers/bookshelves_provider.dart';
+import '../services/cover_image_service.dart';
 import 'epub_reader_screen.dart';
 
 class BookshelfDetailScreen extends ConsumerStatefulWidget {
@@ -654,6 +655,14 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.image, color: Colors.purple),
+                title: const Text('編輯封面'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _editBookCover(book);
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.remove_circle, color: Colors.orange),
                 title: const Text('從書架移除'),
                 onTap: () {
@@ -667,32 +676,6 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
         );
       },
     );
-  }
-
-  void _addBookToShelf(EpubBook book) async {
-    try {
-      await ref
-          .read(bookshelvesProvider.notifier)
-          .addBookToShelf(widget.bookshelf.id, book.id);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('已將「${book.title}」添加到書架'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('添加書籍失敗：$e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   void _removeBookFromShelf(EpubBook book) async {
@@ -715,6 +698,179 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
           SnackBar(
             content: Text('移除書籍失敗：$e'),
             backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _editBookCover(EpubBook book) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.image, color: Colors.purple),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '編輯封面',
+                  style: const TextStyle(fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 當前封面預覽
+              Container(
+                width: 120,
+                height: 180,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: book.coverImage != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          book.coverImage!,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.book,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                '書名：${book.title}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _updateBookCover(book);
+                    },
+                    icon: const Icon(Icons.upload),
+                    label: const Text('更換封面'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  if (book.coverImage != null)
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final shouldRemove =
+                            await CoverImageService.showRemoveCoverDialog(
+                                context);
+                        if (shouldRemove && mounted) {
+                          await _removeCover(book);
+                        }
+                      },
+                      icon: const Icon(Icons.delete),
+                      label: const Text('移除封面'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                '關閉',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _updateBookCover(EpubBook book) async {
+    try {
+      final newCoverData =
+          await CoverImageService.showImagePickerDialog(context);
+
+      if (newCoverData != null && mounted) {
+        // 更新書籍封面
+        final updatedBook = book.copyWith(coverImage: newCoverData);
+        await ref.read(booksProvider.notifier).updateBook(updatedBook);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已更新「${book.title}」的封面'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('更新封面失敗：$e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeCover(EpubBook book) async {
+    try {
+      // 移除書籍封面
+      final updatedBook = book.copyWith(clearCoverImage: true);
+      await ref.read(booksProvider.notifier).updateBook(updatedBook);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已移除「${book.title}」的封面'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('移除封面失敗：$e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }

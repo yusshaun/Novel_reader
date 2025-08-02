@@ -7,37 +7,37 @@ part 'epub_book.g.dart';
 class EpubBook extends HiveObject {
   @HiveField(0)
   String id;
-  
+
   @HiveField(1)
   String title;
-  
+
   @HiveField(2)
   String author;
-  
+
   @HiveField(3)
   Uint8List? coverImage;
-  
+
   @HiveField(4)
   String filePath;
-  
+
   @HiveField(5)
   DateTime lastRead;
-  
+
   @HiveField(6)
   String? description;
-  
+
   @HiveField(7)
   List<String>? genres;
-  
+
   @HiveField(8)
   String? publisher;
-  
+
   @HiveField(9)
   DateTime? publishDate;
-  
+
   @HiveField(10)
   int totalPages;
-  
+
   @HiveField(11)
   String? language;
 
@@ -61,6 +61,7 @@ class EpubBook extends HiveObject {
     String? title,
     String? author,
     Uint8List? coverImage,
+    bool? clearCoverImage,
     String? filePath,
     DateTime? lastRead,
     String? description,
@@ -74,7 +75,8 @@ class EpubBook extends HiveObject {
       id: id ?? this.id,
       title: title ?? this.title,
       author: author ?? this.author,
-      coverImage: coverImage ?? this.coverImage,
+      coverImage:
+          clearCoverImage == true ? null : (coverImage ?? this.coverImage),
       filePath: filePath ?? this.filePath,
       lastRead: lastRead ?? this.lastRead,
       description: description ?? this.description,
