@@ -8,15 +8,20 @@ A feature-rich, cross-platform EPUB reader built with Flutter 3.x + Dart 3.x, im
 - ✅ EPUB file parsing using epubx library
 - ✅ Advanced HTML to text conversion with proper formatting
 - ✅ Intelligent pagination algorithm with adaptive layout
-- ✅ Chapter navigation with table of contents
+- ✅ **Chapter navigation with interactive table of contents**
+- ✅ **Chapter selection modal with page information**
+- ✅ **Current chapter display in reading interface**
 - ✅ Touch controls (tap to toggle UI, left/right zones for page navigation)
 - ✅ Reading progress tracking with automatic saves
 
 ### Book Management
 - ✅ Custom bookshelf system with color themes
+- ✅ **Bookshelf cover customization with dedicated editing interface**
+- ✅ **Book cover editing and management**
 - ✅ Book import via file picker (Android/Windows)
 - ✅ Drag-and-drop support preparation (Windows)
 - ✅ Book metadata display (title, author, cover, progress)
+- ✅ **Manual book sorting within bookshelves**
 - ✅ Search functionality across library
 - ✅ Recent books tracking
 
@@ -26,6 +31,13 @@ A feature-rich, cross-platform EPUB reader built with Flutter 3.x + Dart 3.x, im
 - ✅ Dark/Light theme switching
 - ✅ Reading theme persistence
 - ✅ Adaptive theming with system integration
+
+### Chapter Navigation Features
+- ✅ **Interactive chapter selection modal**
+- ✅ **Chapter-to-page mapping system**
+- ✅ **Current chapter indicator in bottom navigation**
+- ✅ **Quick chapter jumping functionality**
+- ✅ **Chapter progress visualization**
 
 ### Cross-Device Sync
 - ✅ Firebase Firestore integration for progress sync
@@ -39,6 +51,7 @@ A feature-rich, cross-platform EPUB reader built with Flutter 3.x + Dart 3.x, im
 - ✅ Tabbed interface (Library, Shelves, Recent)
 - ✅ Smooth animations and transitions
 - ✅ Comprehensive settings screen
+- ✅ **Shelf-first navigation with custom cover display**
 
 ### Data Management
 - ✅ Hive local storage for offline access

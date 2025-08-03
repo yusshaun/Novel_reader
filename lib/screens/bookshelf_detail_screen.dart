@@ -192,7 +192,8 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                                     ),
                                     child: currentShelf.coverImage != null
                                         ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(16),
+                                            borderRadius:
+                                                BorderRadius.circular(16),
                                             child: Image.memory(
                                               currentShelf.coverImage!,
                                               fit: BoxFit.cover,
@@ -228,7 +229,8 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                                           child: Icon(
                                             Icons.camera_alt,
                                             size: 14,
-                                            color: Color(currentShelf.themeColorValue),
+                                            color: Color(
+                                                currentShelf.themeColorValue),
                                           ),
                                         ),
                                       ),
@@ -860,7 +862,7 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
 
   void _editShelfCover() async {
     final shelfColor = Color(widget.bookshelf.themeColorValue);
-    
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1023,7 +1025,7 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
   Future<void> _removeShelfCover() async {
     try {
       debugPrint('開始移除書架封面...');
-      
+
       // 更新書架，移除封面
       final updatedShelf = widget.bookshelf.copyWith(
         clearCoverImage: true,
@@ -1336,7 +1338,7 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                     await Future.delayed(const Duration(milliseconds: 100));
 
                     Navigator.pop(context);
-                    
+
                     // 強制刷新當前頁面
                     if (mounted) {
                       setState(() {});
