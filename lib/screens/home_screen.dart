@@ -259,10 +259,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: _buildCurrentContent(books, bookshelves, filteredBooks),
           ) ??
           _buildCurrentContent(books, bookshelves, filteredBooks),
-      floatingActionButton: PlatformFileImport.buildFileImportButton(
-        onPressed: _importEpubFile,
-        isLoading: _isLoading,
-      ),
+      floatingActionButton: _selectedIndex == 1 // Shelves tab
+          ? FloatingActionButton(
+              onPressed: _showCreateShelfDialog,
+              tooltip: '新增書架',
+              child: const Icon(Icons.add),
+            )
+          : PlatformFileImport.buildFileImportButton(
+              onPressed: _importEpubFile,
+              isLoading: _isLoading,
+            ),
     );
   }
 
@@ -1086,6 +1092,121 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return BookGrid(
       books: recentBooks,
       onBookTap: _openBook,
+    );
+  }
+
+  void _showCreateShelfDialog() {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    Color selectedColor = Colors.blue;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('新增書架'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: '書架名稱',
+                  hintText: '輸入書架名稱',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: '描述（可選）',
+                  hintText: '輸入書架描述',
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Text('顏色：'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      children: [
+                        Colors.blue,
+                        Colors.red,
+                        Colors.green,
+                        Colors.orange,
+                        Colors.purple,
+                        Colors.teal,
+                        Colors.pink,
+                        Colors.brown,
+                      ].map((color) => GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedColor = color;
+                          });
+                        },
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: selectedColor == color
+                                ? Border.all(color: Colors.black, width: 2)
+                                : null,
+                          ),
+                        ),
+                      )).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameController.text.trim();
+                if (name.isNotEmpty) {
+                  try {
+                    await ref.read(bookshelvesProvider.notifier).createShelf(
+                      name: name,
+                      themeColor: selectedColor,
+                      description: descriptionController.text.trim().isEmpty
+                          ? null
+                          : descriptionController.text.trim(),
+                    );
+                    
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('書架「$name」已建立')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('建立書架失敗：$e')),
+                      );
+                    }
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('請輸入書架名稱')),
+                  );
+                }
+              },
+              child: const Text('建立'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
