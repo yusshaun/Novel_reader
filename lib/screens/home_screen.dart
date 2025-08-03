@@ -309,82 +309,144 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           borderRadius: BorderRadius.circular(12),
         ),
         child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(shelf.themeColorValue),
-                Color(shelf.themeColorValue).withOpacity(0.7),
-              ],
-            ),
-          ),
           child: Stack(
             children: [
-              // 背景裝飾圖案
-              Positioned(
-                top: -15,
-                right: -15,
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.1),
+              // 背景：書架封面或漸變背景
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: shelf.coverImage != null 
+                      ? null 
+                      : LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(shelf.themeColorValue),
+                            Color(shelf.themeColorValue).withOpacity(0.7),
+                          ],
+                        ),
+                ),
+                child: shelf.coverImage != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Stack(
+                          children: [
+                            // 封面圖片作為背景
+                            Positioned.fill(
+                              child: Image.memory(
+                                shelf.coverImage!,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            // 半透明遮罩確保文字可讀性
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withOpacity(0.6),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : null,
+              ),
+              // 背景裝飾圖案（僅在沒有封面時顯示）
+              if (shelf.coverImage == null) ...[
+                Positioned(
+                  top: -15,
+                  right: -15,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.1),
+                    ),
                   ),
                 ),
-              ),
-              Positioned(
-                bottom: -8,
-                left: -8,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
+                Positioned(
+                  bottom: -8,
+                  left: -8,
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.05),
+                    ),
                   ),
                 ),
-              ),
+              ],
               // 主要內容
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 頂部區域：封面圖片/圖示和選項按鈕
+                    // 頂部區域：圖示和選項按鈕
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: shelf.coverImage != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.memory(
-                                    shelf.coverImage!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.library_books,
-                                  size: 24,
+                        // 如果沒有封面，顯示圖示
+                        if (shelf.coverImage == null)
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.library_books,
+                              size: 24,
+                              color: Colors.white,
+                            ),
+                          )
+                        else
+                          // 如果有封面，顯示小標記
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.photo,
+                                  size: 16,
                                   color: Colors.white,
                                 ),
-                        ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '自訂封面',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         if (!shelf.isDefault)
                           GestureDetector(
                             onTap: () => _showShelfOptions(shelf),
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: (shelf.coverImage != null 
+                                    ? Colors.black 
+                                    : Colors.white).withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(
@@ -397,26 +459,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ],
                     ),
                     const Spacer(),
-                    // 書架名稱
-                    Text(
-                      shelf.shelfName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    // 書架名稱（增強可讀性）
+                    Container(
+                      padding: shelf.coverImage != null 
+                          ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+                          : EdgeInsets.zero,
+                      decoration: shelf.coverImage != null
+                          ? BoxDecoration(
+                              color: Colors.black.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(6),
+                            )
+                          : null,
+                      child: Text(
+                        shelf.shelfName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: shelf.coverImage != null
+                              ? [
+                                  Shadow(
+                                    offset: Offset(1, 1),
+                                    blurRadius: 3,
+                                    color: Colors.black.withOpacity(0.8),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
-                    // 書籍數量
+                    // 書籍數量（增強可讀性）
                     Consumer(
                       builder: (context, ref, child) {
-                        return Text(
-                          '${shelf.bookIds.length} 本書',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white70,
+                        return Container(
+                          padding: shelf.coverImage != null 
+                              ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
+                              : EdgeInsets.zero,
+                          decoration: shelf.coverImage != null
+                              ? BoxDecoration(
+                                  color: Colors.black.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(4),
+                                )
+                              : null,
+                          child: Text(
+                            '${shelf.bookIds.length} 本書',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white70,
+                              shadows: shelf.coverImage != null
+                                  ? [
+                                      Shadow(
+                                        offset: Offset(1, 1),
+                                        blurRadius: 2,
+                                        color: Colors.black.withOpacity(0.8),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
                           ),
                         );
                       },
