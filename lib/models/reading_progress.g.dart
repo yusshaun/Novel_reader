@@ -26,7 +26,7 @@ class ReadingProgressAdapter extends TypeAdapter<ReadingProgress> {
       chapterTitle: fields[6] as String?,
       progressPercentage: fields[7] as double,
       totalPages: fields[8] as int,
-      readingTime: fields[9] as Duration,
+      readingTimeMs: fields[9] as int,
       lastReadText: fields[10] as String?,
       isSynced: fields[11] as bool,
     );
@@ -55,7 +55,7 @@ class ReadingProgressAdapter extends TypeAdapter<ReadingProgress> {
       ..writeByte(8)
       ..write(obj.totalPages)
       ..writeByte(9)
-      ..write(obj.readingTime)
+      ..write(obj.readingTimeMs)
       ..writeByte(10)
       ..write(obj.lastReadText)
       ..writeByte(11)

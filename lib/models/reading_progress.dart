@@ -6,39 +6,42 @@ part 'reading_progress.g.dart';
 class ReadingProgress extends HiveObject {
   @HiveField(0)
   String id;
-  
+
   @HiveField(1)
   String bookId;
-  
+
   @HiveField(2)
   int lastPage;
-  
+
   @HiveField(3)
   double scrollPosition;
-  
+
   @HiveField(4)
   DateTime timestamp;
-  
+
   @HiveField(5)
   String? chapterId;
-  
+
   @HiveField(6)
   String? chapterTitle;
-  
+
   @HiveField(7)
   double progressPercentage;
-  
+
   @HiveField(8)
   int totalPages;
-  
+
   @HiveField(9)
-  Duration readingTime;
-  
+  int readingTimeMs; // 以毫秒為單位保存閱讀時間
+
   @HiveField(10)
   String? lastReadText;
-  
+
   @HiveField(11)
   bool isSynced;
+
+  // 便利的 getter 來獲取 Duration 對象
+  Duration get readingTime => Duration(milliseconds: readingTimeMs);
 
   ReadingProgress({
     required this.id,
@@ -50,7 +53,7 @@ class ReadingProgress extends HiveObject {
     this.chapterTitle,
     this.progressPercentage = 0.0,
     this.totalPages = 0,
-    this.readingTime = Duration.zero,
+    this.readingTimeMs = 0,
     this.lastReadText,
     this.isSynced = false,
   });
@@ -65,7 +68,7 @@ class ReadingProgress extends HiveObject {
     String? chapterTitle,
     double? progressPercentage,
     int? totalPages,
-    Duration? readingTime,
+    int? readingTimeMs,
     String? lastReadText,
     bool? isSynced,
   }) {
@@ -79,7 +82,7 @@ class ReadingProgress extends HiveObject {
       chapterTitle: chapterTitle ?? this.chapterTitle,
       progressPercentage: progressPercentage ?? this.progressPercentage,
       totalPages: totalPages ?? this.totalPages,
-      readingTime: readingTime ?? this.readingTime,
+      readingTimeMs: readingTimeMs ?? this.readingTimeMs,
       lastReadText: lastReadText ?? this.lastReadText,
       isSynced: isSynced ?? this.isSynced,
     );
@@ -99,27 +102,27 @@ class ReadingProgress extends HiveObject {
         progressPercentage = (page / totalPages) * 100;
       }
     }
-    
+
     if (scroll != null) {
       scrollPosition = scroll;
     }
-    
+
     if (chapterId != null) {
       this.chapterId = chapterId;
     }
-    
+
     if (chapterTitle != null) {
       this.chapterTitle = chapterTitle;
     }
-    
+
     if (additionalReadingTime != null) {
-      readingTime += additionalReadingTime;
+      readingTimeMs += additionalReadingTime.inMilliseconds;
     }
-    
+
     if (lastText != null) {
       lastReadText = lastText;
     }
-    
+
     timestamp = DateTime.now();
     isSynced = false;
   }
@@ -134,7 +137,7 @@ class ReadingProgress extends HiveObject {
       'chapterTitle': chapterTitle,
       'progressPercentage': progressPercentage,
       'totalPages': totalPages,
-      'readingTimeInSeconds': readingTime.inSeconds,
+      'readingTimeInSeconds': (readingTimeMs / 1000).round(),
       'lastReadText': lastReadText,
     };
   }
@@ -150,7 +153,7 @@ class ReadingProgress extends HiveObject {
       chapterTitle: data['chapterTitle'],
       progressPercentage: (data['progressPercentage'] ?? 0.0).toDouble(),
       totalPages: data['totalPages'] ?? 0,
-      readingTime: Duration(seconds: data['readingTimeInSeconds'] ?? 0),
+      readingTimeMs: (data['readingTimeInSeconds'] ?? 0) * 1000,
       lastReadText: data['lastReadText'],
       isSynced: true,
     );

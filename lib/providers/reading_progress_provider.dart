@@ -27,8 +27,12 @@ class ReadingProgressNotifier
 
   static Map<String, ReadingProgress> _loadProgress(Box<ReadingProgress> box) {
     final Map<String, ReadingProgress> progressMap = {};
-    for (final progress in box.values) {
-      progressMap[progress.bookId] = progress;
+    // 由於我們現在使用 bookId 作為 key，可以直接使用 box 的 keys 和 values
+    for (final key in box.keys) {
+      final progress = box.get(key);
+      if (progress != null) {
+        progressMap[key.toString()] = progress;
+      }
     }
     return progressMap;
   }
@@ -70,13 +74,67 @@ class ReadingProgressNotifier
         chapterId: chapterId,
         chapterTitle: chapterTitle,
         totalPages: totalPages ?? 0,
-        readingTime: additionalReadingTime ?? Duration.zero,
+        readingTimeMs: additionalReadingTime?.inMilliseconds ?? 0,
         lastReadText: lastReadText,
       );
     }
 
-    await _box.put(progress.id, progress);
+    await _box.put(bookId, progress);
     state = {...state, bookId: progress};
+  }
+
+  // 同步版本，用於應用退出時保存
+  void updateProgressSync({
+    required String bookId,
+    int? page,
+    double? scrollPosition,
+    String? chapterId,
+    String? chapterTitle,
+    Duration? additionalReadingTime,
+    String? lastReadText,
+    int? totalPages,
+  }) {
+    final existingProgress = state[bookId];
+    ReadingProgress progress;
+
+    if (existingProgress != null) {
+      progress = existingProgress.copyWith();
+      progress.updateProgress(
+        page: page,
+        scroll: scrollPosition,
+        chapterId: chapterId,
+        chapterTitle: chapterTitle,
+        additionalReadingTime: additionalReadingTime,
+        lastText: lastReadText,
+      );
+
+      if (totalPages != null) {
+        progress = progress.copyWith(totalPages: totalPages);
+      }
+    } else {
+      progress = ReadingProgress(
+        id: _uuid.v4(),
+        bookId: bookId,
+        lastPage: page ?? 0,
+        scrollPosition: scrollPosition ?? 0.0,
+        timestamp: DateTime.now(),
+        chapterId: chapterId,
+        chapterTitle: chapterTitle,
+        totalPages: totalPages ?? 0,
+        readingTimeMs: additionalReadingTime?.inMilliseconds ?? 0,
+        lastReadText: lastReadText,
+      );
+    }
+
+    // 異步保存，但不等待完成
+    Future.microtask(() async {
+      try {
+        await _box.put(bookId, progress);
+        state = {...state, bookId: progress};
+      } catch (e) {
+        print('Failed to save progress: $e');
+      }
+    });
   }
 
   ReadingProgress? getProgress(String bookId) {
@@ -86,7 +144,7 @@ class ReadingProgressNotifier
   Future<void> deleteProgress(String bookId) async {
     final progress = state[bookId];
     if (progress != null) {
-      await _box.delete(progress.id);
+      await _box.delete(bookId);
       final newState = Map<String, ReadingProgress>.from(state);
       newState.remove(bookId);
       state = newState;

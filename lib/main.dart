@@ -30,7 +30,19 @@ void main() async {
   await Hive.openBox<EpubBook>('books');
   await Hive.openBox<BookShelf>('bookshelves');
   await Hive.openBox<ReaderTheme>('reader_theme');
-  await Hive.openBox<ReadingProgress>('reading_progress');
+
+  // 清理舊的進度數據（臨時）
+  try {
+    final progressBox = await Hive.openBox<ReadingProgress>('reading_progress');
+    // 清除舊的不兼容格式的數據
+    await progressBox.clear();
+    print('Cleared old reading progress data');
+  } catch (e) {
+    print('Error clearing progress box: $e');
+    // 如果打開失敗，刪除舊盒子並重新創建
+    await Hive.deleteBoxFromDisk('reading_progress');
+    await Hive.openBox<ReadingProgress>('reading_progress');
+  }
 
   final savedThemeMode = await AdaptiveTheme.getThemeMode();
 

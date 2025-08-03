@@ -18,7 +18,8 @@ class EpubReaderScreen extends ConsumerStatefulWidget {
   ConsumerState<EpubReaderScreen> createState() => _EpubReaderScreenState();
 }
 
-class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
+class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
+    with WidgetsBindingObserver {
   int _currentPage = 0;
   final List<String> _pages = ['Loading...'];
   List<epubx.EpubChapter> _chapters = [];
@@ -31,15 +32,75 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
   @override
   void initState() {
     super.initState();
-    _loadReadingProgress();
+    // 註冊應用狀態監聽器
+    WidgetsBinding.instance.addObserver(this);
+    // 先載入閱讀進度來獲取正確的起始頁面
+    _loadInitialProgress();
+    _pageController = PageController(initialPage: _currentPage);
     _loadBook();
+  }
+
+  // 載入初始閱讀進度
+  void _loadInitialProgress() {
+    print('Loading initial progress for bookId: ${widget.book.id}');
+    final progressMap = ref.read(readingProgressProvider);
+    final progress = progressMap[widget.book.id];
+
+    if (progress != null) {
+      // 先設定頁面，稍後在書本載入完成後會調整
+      // 進度保存時是 +1 的，所以載入時要 -1 轉換回索引
+      _currentPage = (progress.lastPage - 1).clamp(0, 999999);
+      print(
+          'Found initial progress: display page ${progress.lastPage}, index $_currentPage');
+    } else {
+      print('No initial progress found for bookId: ${widget.book.id}');
+    }
   }
 
   @override
   void dispose() {
-    _saveReadingProgress();
+    // 移除應用狀態監聽器
+    WidgetsBinding.instance.removeObserver(this);
+    // 在銷毀前最後一次保存進度
+    _saveReadingProgressSync();
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // 當應用進入後台或非活躍狀態時保存進度
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _saveReadingProgressSync();
+    }
+  }
+
+  // 同步保存進度（用於 dispose 和應用狀態變化時）
+  void _saveReadingProgressSync() {
+    if (_pages.isEmpty || _currentPage < 0 || !mounted) {
+      return;
+    }
+
+    try {
+      // 使用同步方式保存進度，頁數 +1 與顯示一致
+      ref.read(readingProgressProvider.notifier).updateProgressSync(
+            bookId: widget.book.id,
+            page: _currentPage + 1, // 頁數 +1，從 1 開始計數
+            totalPages: _pages.length,
+            chapterId: _currentChapterIndex.toString(),
+            chapterTitle:
+                _chapters.isNotEmpty && _currentChapterIndex < _chapters.length
+                    ? _chapters[_currentChapterIndex].Title
+                    : null,
+          );
+      print(
+          '✅ Saved reading progress on exit: page ${_currentPage + 1} of ${_pages.length}');
+    } catch (e) {
+      print('❌ Failed to save reading progress on exit: $e');
+    }
   }
 
   @override
@@ -92,35 +153,39 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
 
   // 載入閱讀進度
   void _loadReadingProgress() {
+    print('Loading progress for bookId: ${widget.book.id}');
     final progressMap = ref.read(readingProgressProvider);
     final progress = progressMap[widget.book.id];
 
-    if (progress != null) {
-      _currentPage = progress.lastPage;
-      print('Loaded reading progress: page ${progress.lastPage}');
-    }
+    if (progress != null && _pages.isNotEmpty) {
+      // 進度保存時是 +1 的，所以載入時要 -1 轉換回索引
+      final targetPage = (progress.lastPage).clamp(0, _pages.length);
 
-    _pageController = PageController(initialPage: _currentPage);
-  }
+      // 如果目標頁面與當前頁面不同，則跳轉
+      if (targetPage != _currentPage) {
+        setState(() {
+          _currentPage = targetPage;
+        });
 
-  // 保存閱讀進度
-  Future<void> _saveReadingProgress() async {
-    if (_pages.isEmpty || _currentPage < 0) return;
+        // 使用 animateToPage 平滑跳轉到目標頁面
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_pageController.hasClients) {
+            _pageController.animateToPage(
+              _currentPage,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        });
+      }
 
-    try {
-      await ref.read(readingProgressProvider.notifier).updateProgress(
-            bookId: widget.book.id,
-            page: _currentPage,
-            totalPages: _pages.length,
-            chapterId: _currentChapterIndex.toString(),
-            chapterTitle:
-                _chapters.isNotEmpty && _currentChapterIndex < _chapters.length
-                    ? _chapters[_currentChapterIndex].Title
-                    : null,
-          );
-      print('Saved reading progress: page $_currentPage of ${_pages.length}');
-    } catch (e) {
-      print('Failed to save reading progress: $e');
+      _updateCurrentChapter();
+
+      print(
+          '✅ Loaded reading progress: display page ${progress.lastPage}, adjusted to index: $_currentPage');
+    } else {
+      print(
+          '❌ No progress found for bookId: ${widget.book.id}, available keys: ${progressMap.keys.toList()}');
     }
   }
 
@@ -265,12 +330,25 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
         }
 
         print('Total pages loaded: ${_pages.length}');
+        print('📊 Page distribution:');
+        if (_pages.isNotEmpty) {
+          final firstPagePreview = _pages[0].length > 50
+              ? _pages[0].substring(0, 50).replaceAll('\n', ' ')
+              : _pages[0].replaceAll('\n', ' ');
+          print('  - First page preview: $firstPagePreview...');
+        }
+        if (_pages.length > 1) {
+          final lastPage = _pages[_pages.length - 1];
+          final lastPagePreview = lastPage.length > 50
+              ? lastPage.substring(0, 50).replaceAll('\n', ' ')
+              : lastPage.replaceAll('\n', ' ');
+          print('  - Last page preview: $lastPagePreview...');
+          print('  - Last page length: ${lastPage.length} characters');
+        }
+        print('  - Total accessible pages: 0 to ${_pages.length - 1}');
 
-        // 重新初始化 PageController 並恢復閱讀進度
-        _pageController.dispose();
-        _currentPage = _currentPage.clamp(0, _pages.length - 1); // 確保頁面索引有效
-        _pageController = PageController(initialPage: _currentPage);
-        _updateCurrentChapter();
+        // 載入並恢復閱讀進度
+        _loadReadingProgress();
       });
     } catch (e) {
       print('Error loading book: $e');
@@ -487,8 +565,13 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
       _updateCurrentChapter();
     });
 
-    // 自動保存閱讀進度
-    _saveReadingProgress();
+    // 特殊檢查：是否到達最後一頁
+    if (page == _pages.length - 1) {
+      print('🏁 Reached last page: $page (total: ${_pages.length})');
+    }
+
+    // 不在每次翻頁時保存進度，只在退出時保存
+    // _saveReadingProgress(); // 已移除
   }
 
   void _updateCurrentChapter() {
@@ -566,6 +649,8 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    // 在返回前保存進度
+                    _saveReadingProgressSync();
                     Navigator.of(context).pop(); // 先關閉 Drawer
                     Navigator.of(context).pop(); // 再返回到上一個頁面
                   },
@@ -784,6 +869,26 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
               onPageChanged: _onPageChanged,
               itemCount: _pages.length,
               itemBuilder: (context, index) {
+                // 確保索引在有效範圍內
+                if (index >= _pages.length) {
+                  print('⚠️ Invalid page index: $index >= ${_pages.length}');
+                  return Container(
+                    padding: const EdgeInsets.all(16.0),
+                    child: const Center(
+                      child: Text(
+                        '頁面索引錯誤',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                    ),
+                  );
+                }
+
+                // 顯示調試資訊（僅在最後幾頁）
+                if (index >= _pages.length - 3) {
+                  print(
+                      '📖 Rendering page $index of ${_pages.length - 1} (total: ${_pages.length})');
+                }
+
                 return GestureDetector(
                   onTapUp: (details) {
                     final screenWidth = MediaQuery.of(context).size.width;
@@ -802,14 +907,34 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
                           child: Container(
                             width: double.infinity,
                             alignment: Alignment.topLeft,
-                            child: Text(
-                              index < _pages.length
-                                  ? _pages[index]
-                                  : 'Loading...',
-                              style: const TextStyle(
-                                fontSize: 16.0,
-                                height: 1.5,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 在最後一頁顯示額外資訊
+                                if (index == _pages.length - 1)
+                                  Container(
+                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                    child: Text(
+                                      '--- 最後一頁 (${index + 1}/${_pages.length}) ---',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: Text(
+                                    index < _pages.length
+                                        ? _pages[index]
+                                        : 'Loading...',
+                                    style: const TextStyle(
+                                      fontSize: 16.0,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -937,6 +1062,8 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
                               // 返回按鈕
                               InkWell(
                                 onTap: () {
+                                  // 在返回前保存進度
+                                  _saveReadingProgressSync();
                                   Navigator.of(context).pop();
                                 },
                                 borderRadius: BorderRadius.circular(8),
