@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:epubx/epubx.dart' as epubx;
 import 'dart:io';
@@ -24,11 +25,19 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
   int _currentChapterIndex = 0;
   Size? _lastScreenSize; // 記錄上次的螢幕尺寸
   String _originalText = ''; // 保存原始文本用於重新分頁
+  late PageController _pageController; // PageView 控制器
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _currentPage);
     _loadBook();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -70,6 +79,10 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
         _chapterPageMapping[0] = 0;
         _updateCurrentChapter();
       }
+
+      // 重新初始化 PageController 以確保正確的頁面狀態
+      _pageController.dispose();
+      _pageController = PageController(initialPage: _currentPage);
     });
 
     print('Re-paginated: ${_pages.length} pages, current page: $_currentPage');
@@ -224,12 +237,20 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
         }
 
         print('Total pages loaded: ${_pages.length}');
+
+        // 重新初始化 PageController 確保正確的初始狀態
+        _pageController.dispose();
+        _pageController = PageController(initialPage: _currentPage);
       });
     } catch (e) {
       print('Error loading book: $e');
       setState(() {
         _pages.clear();
         _pages.add('載入書籍時發生錯誤: $e\n\n檔案: ${widget.book.filePath}');
+
+        // 重新初始化 PageController
+        _pageController.dispose();
+        _pageController = PageController(initialPage: 0);
       });
     }
   }
@@ -422,20 +443,27 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
 
   void _nextPage() {
     if (_currentPage < _pages.length - 1) {
-      setState(() {
-        _currentPage++;
-        _updateCurrentChapter();
-      });
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
   void _previousPage() {
     if (_currentPage > 0) {
-      setState(() {
-        _currentPage--;
-        _updateCurrentChapter();
-      });
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
+  }
+
+  void _onPageChanged(int page) {
+    setState(() {
+      _currentPage = page;
+      _updateCurrentChapter();
+    });
   }
 
   void _updateCurrentChapter() {
@@ -452,10 +480,13 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
   void _goToChapter(int chapterIndex) {
     if (chapterIndex >= 0 && chapterIndex < _chapters.length) {
       final startPage = _chapterPageMapping[chapterIndex] ?? 0;
-      setState(() {
-        _currentPage = startPage;
-        _currentChapterIndex = chapterIndex;
-      });
+
+      // 使用 PageController 跳轉到指定頁面
+      _pageController.animateToPage(
+        startPage,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -656,10 +687,11 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
                     icon: const Icon(Icons.first_page),
                     onPressed: _currentPage > 0
                         ? () {
-                            setState(() {
-                              _currentPage = 0;
-                            });
-                            _updateCurrentChapter();
+                            _pageController.animateToPage(
+                              0,
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOut,
+                            );
                             Navigator.pop(context);
                           }
                         : null,
@@ -689,10 +721,11 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
                     icon: const Icon(Icons.last_page),
                     onPressed: _currentPage < _pages.length - 1
                         ? () {
-                            setState(() {
-                              _currentPage = _pages.length - 1;
-                            });
-                            _updateCurrentChapter();
+                            _pageController.animateToPage(
+                              _pages.length - 1,
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOut,
+                            );
                             Navigator.pop(context);
                           }
                         : null,
@@ -704,63 +737,83 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
           ],
         ),
       ),
-      body: GestureDetector(
-        onTapUp: (details) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          if (details.globalPosition.dx < screenWidth / 3) {
-            _previousPage();
-          } else if (details.globalPosition.dx > screenWidth * 2 / 3) {
-            _nextPage();
+      body: Listener(
+        onPointerSignal: (pointerSignal) {
+          if (pointerSignal is PointerScrollEvent) {
+            // 向下滾動 (scrollDelta.dy > 0) = 下一頁
+            // 向上滾動 (scrollDelta.dy < 0) = 上一頁
+            if (pointerSignal.scrollDelta.dy > 0) {
+              _nextPage();
+            } else if (pointerSignal.scrollDelta.dy < 0) {
+              _previousPage();
+            }
           }
         },
-        child: Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  alignment: Alignment.topLeft,
-                  child: Text(
-                    _pages.isNotEmpty ? _pages[_currentPage] : 'Loading...',
-                    style: const TextStyle(
-                      fontSize: 16.0,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              // 簡化的底部資訊
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: PageView.builder(
+          controller: _pageController,
+          onPageChanged: _onPageChanged,
+          itemCount: _pages.length,
+          itemBuilder: (context, index) {
+            return GestureDetector(
+              onTapUp: (details) {
+                final screenWidth = MediaQuery.of(context).size.width;
+                if (details.globalPosition.dx < screenWidth / 3) {
+                  _previousPage();
+                } else if (details.globalPosition.dx > screenWidth * 2 / 3) {
+                  _nextPage();
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
                   children: [
-                    Text(
-                      'Page ${_currentPage + 1} of ${_pages.length}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    if (_chapters.isNotEmpty &&
-                        _currentChapterIndex < _chapters.length)
-                      Flexible(
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        alignment: Alignment.topLeft,
                         child: Text(
-                          _chapters[_currentChapterIndex].Title ??
-                              '第 ${_currentChapterIndex + 1} 章',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[600],
+                          index < _pages.length ? _pages[index] : 'Loading...',
+                          style: const TextStyle(
+                            fontSize: 16.0,
+                            height: 1.5,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    Text(
-                        '${((_currentPage + 1) / _pages.length * 100).toInt()}%'),
+                    ),
+                    // 簡化的底部資訊
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Page ${index + 1} of ${_pages.length}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          if (_chapters.isNotEmpty &&
+                              _currentChapterIndex < _chapters.length)
+                            Flexible(
+                              child: Text(
+                                _chapters[_currentChapterIndex].Title ??
+                                    '第 ${_currentChapterIndex + 1} 章',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          Text(
+                              '${((index + 1) / _pages.length * 100).toInt()}%'),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
