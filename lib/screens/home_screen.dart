@@ -353,21 +353,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 頂部區域：圖示和選項按鈕
+                    // 頂部區域：封面圖片/圖示和選項按鈕
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
+                          width: 50,
+                          height: 50,
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(
-                            Icons.library_books,
-                            size: 24,
-                            color: Colors.white,
-                          ),
+                          child: shelf.coverImage != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.memory(
+                                    shelf.coverImage!,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.library_books,
+                                  size: 24,
+                                  color: Colors.white,
+                                ),
                         ),
                         if (!shelf.isDefault)
                           GestureDetector(

@@ -25,13 +25,14 @@ class BookShelfAdapter extends TypeAdapter<BookShelf> {
       updatedAt: fields[5] as DateTime,
       description: fields[6] as String?,
       isDefault: fields[7] as bool,
+      coverImage: fields[8] as Uint8List?,
     );
   }
 
   @override
   void write(BinaryWriter writer, BookShelf obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class BookShelfAdapter extends TypeAdapter<BookShelf> {
       ..writeByte(6)
       ..write(obj.description)
       ..writeByte(7)
-      ..write(obj.isDefault);
+      ..write(obj.isDefault)
+      ..writeByte(8)
+      ..write(obj.coverImage);
   }
 
   @override

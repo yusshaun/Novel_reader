@@ -181,17 +181,59 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                         children: [
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Icon(
-                                  Icons.library_books,
-                                  size: 32,
-                                  color: Colors.white,
-                                ),
+                              Stack(
+                                children: [
+                                  Container(
+                                    width: 64,
+                                    height: 64,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: currentShelf.coverImage != null
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(16),
+                                            child: Image.memory(
+                                              currentShelf.coverImage!,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.library_books,
+                                            size: 32,
+                                            color: Colors.white,
+                                          ),
+                                  ),
+                                  // 封面編輯按鈕
+                                  if (!_isEditMode && !_isSortMode)
+                                    Positioned(
+                                      bottom: -2,
+                                      right: -2,
+                                      child: GestureDetector(
+                                        onTap: _editShelfCover,
+                                        child: Container(
+                                          width: 24,
+                                          height: 24,
+                                          decoration: const BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black26,
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            Icons.camera_alt,
+                                            size: 14,
+                                            color: Color(currentShelf.themeColorValue),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -816,6 +858,205 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
     );
   }
 
+  void _editShelfCover() async {
+    final shelfColor = Color(widget.bookshelf.themeColorValue);
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.collections_bookmark, color: shelfColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '編輯書架封面',
+                  style: const TextStyle(fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 當前封面預覽
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: widget.bookshelf.coverImage != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          widget.bookshelf.coverImage!,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Icon(
+                        Icons.library_books,
+                        size: 48,
+                        color: shelfColor,
+                      ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                '書架：${widget.bookshelf.shelfName}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _updateShelfCover();
+                    },
+                    icon: const Icon(Icons.upload),
+                    label: const Text('更換封面'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: shelfColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  if (widget.bookshelf.coverImage != null)
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final shouldRemove =
+                            await CoverImageService.showRemoveCoverDialog(
+                                context);
+                        if (shouldRemove && mounted) {
+                          await _removeShelfCover();
+                        }
+                      },
+                      icon: const Icon(Icons.delete),
+                      label: const Text('移除封面'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                '關閉',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _updateShelfCover() async {
+    try {
+      debugPrint('開始選擇書架封面圖片...');
+      final newCoverData =
+          await CoverImageService.showImagePickerDialog(context);
+
+      debugPrint('圖片選擇結果: ${newCoverData != null ? '成功' : '失敗'}');
+      if (newCoverData != null) {
+        debugPrint('圖片大小: ${newCoverData.length} bytes');
+        debugPrint('圖片數據哈希: ${newCoverData.hashCode}');
+      }
+
+      if (newCoverData != null && mounted) {
+        debugPrint('開始更新書架封面...');
+        // 更新書架封面
+        final updatedShelf = widget.bookshelf.copyWith(
+          coverImage: newCoverData,
+          updatedAt: DateTime.now(),
+        );
+        await ref.read(bookshelvesProvider.notifier).updateShelf(updatedShelf);
+
+        debugPrint('書架封面更新完成');
+
+        // 強制刷新UI
+        setState(() {});
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('書架封面更新成功'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('更新書架封面失敗: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('更新書架封面失敗：$e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeShelfCover() async {
+    try {
+      debugPrint('開始移除書架封面...');
+      
+      // 更新書架，移除封面
+      final updatedShelf = widget.bookshelf.copyWith(
+        clearCoverImage: true,
+        updatedAt: DateTime.now(),
+      );
+      await ref.read(bookshelvesProvider.notifier).updateShelf(updatedShelf);
+
+      debugPrint('書架封面移除完成');
+
+      // 強制刷新UI
+      setState(() {});
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('書架封面已移除'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('移除書架封面失敗: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('移除書架封面失敗：$e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _updateBookCover(EpubBook book) async {
     try {
       debugPrint('開始選擇封面圖片...');
@@ -835,10 +1076,10 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
         await ref.read(booksProvider.notifier).updateBook(updatedBook);
 
         debugPrint('封面更新完成');
-        
+
         // 強制刷新UI
         setState(() {});
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1091,16 +1332,24 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                         .read(bookshelvesProvider.notifier)
                         .updateShelf(updatedShelf);
 
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('書架「$name」已更新'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
+                    // 等待狀態更新傳播
+                    await Future.delayed(const Duration(milliseconds: 100));
 
-                    // 更新當前頁面
-                    setState(() {});
+                    Navigator.pop(context);
+                    
+                    // 強制刷新當前頁面
+                    if (mounted) {
+                      setState(() {});
+                    }
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('書架「$name」已更新'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: selectedColor,

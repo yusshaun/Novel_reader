@@ -18,7 +18,7 @@ class CoverImageService {
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
         debugPrint('選擇的文件: ${file.name}, 大小: ${file.size} bytes');
-        
+
         if (file.path != null) {
           debugPrint('使用文件路徑處理圖片: ${file.path}');
           return await _processImage(file.path!);
@@ -54,7 +54,7 @@ class CoverImageService {
 
       if (image != null) {
         debugPrint('圖片解碼成功，原始尺寸: ${image.width}x${image.height}');
-        
+
         // 計算新的尺寸，保持書籍封面的比例 (約 2:3)
         int newWidth = 400;
         int newHeight = 600;
