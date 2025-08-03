@@ -5,6 +5,7 @@ import 'dart:io';
 import '../providers/books_provider.dart';
 import '../providers/bookshelves_provider.dart';
 import '../widgets/book_grid.dart';
+import '../widgets/bookshelf_drawer.dart';
 import '../widgets/app_bar_search.dart';
 import '../utils/platform_file_import.dart';
 import 'epub_reader_screen.dart';
@@ -274,7 +275,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: books.isEmpty
               ? _buildEmptyState()
               : BookGrid(
-                  books: filteredBooks.cast(),
+                  books: filteredBooks,
                   onBookTap: _openBook,
                 ),
         );
@@ -285,6 +286,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       default:
         return _buildShelvesTab(bookshelves);
     }
+  }
   }
 
   Widget _buildEmptyState() {
