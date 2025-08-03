@@ -69,6 +69,27 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
         title: Text(currentShelf.shelfName),
         backgroundColor: Color(currentShelf.themeColorValue),
         foregroundColor: Colors.white,
+        leading: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              tooltip: '返回',
+            ),
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () {
+                  Scaffold.of(context).openDrawer();
+                },
+                tooltip: '選單',
+              ),
+            ),
+          ],
+        ),
+        leadingWidth: 100, // 增加 leading 區域寬度以容納兩個按鈕
         actions: [
           if (currentShelf.isDefault)
             Container(

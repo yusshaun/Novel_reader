@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:epubx/epubx.dart' as epubx;
 import 'dart:io';
 import '../models/epub_book.dart';
+import '../providers/reading_progress_provider.dart';
 
 class EpubReaderScreen extends ConsumerStatefulWidget {
   final EpubBook book;
@@ -30,12 +31,13 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: _currentPage);
+    _loadReadingProgress();
     _loadBook();
   }
 
   @override
   void dispose() {
+    _saveReadingProgress();
     _pageController.dispose();
     super.dispose();
   }
@@ -86,6 +88,40 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
     });
 
     print('Re-paginated: ${_pages.length} pages, current page: $_currentPage');
+  }
+
+  // 載入閱讀進度
+  void _loadReadingProgress() {
+    final progressMap = ref.read(readingProgressProvider);
+    final progress = progressMap[widget.book.id];
+
+    if (progress != null) {
+      _currentPage = progress.lastPage;
+      print('Loaded reading progress: page ${progress.lastPage}');
+    }
+
+    _pageController = PageController(initialPage: _currentPage);
+  }
+
+  // 保存閱讀進度
+  Future<void> _saveReadingProgress() async {
+    if (_pages.isEmpty || _currentPage < 0) return;
+
+    try {
+      await ref.read(readingProgressProvider.notifier).updateProgress(
+            bookId: widget.book.id,
+            page: _currentPage,
+            totalPages: _pages.length,
+            chapterId: _currentChapterIndex.toString(),
+            chapterTitle:
+                _chapters.isNotEmpty && _currentChapterIndex < _chapters.length
+                    ? _chapters[_currentChapterIndex].Title
+                    : null,
+          );
+      print('Saved reading progress: page $_currentPage of ${_pages.length}');
+    } catch (e) {
+      print('Failed to save reading progress: $e');
+    }
   }
 
   Future<void> _loadBook() async {
@@ -230,9 +266,11 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
 
         print('Total pages loaded: ${_pages.length}');
 
-        // 重新初始化 PageController 確保正確的初始狀態
+        // 重新初始化 PageController 並恢復閱讀進度
         _pageController.dispose();
+        _currentPage = _currentPage.clamp(0, _pages.length - 1); // 確保頁面索引有效
         _pageController = PageController(initialPage: _currentPage);
+        _updateCurrentChapter();
       });
     } catch (e) {
       print('Error loading book: $e');
@@ -448,6 +486,9 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
       _currentPage = page;
       _updateCurrentChapter();
     });
+
+    // 自動保存閱讀進度
+    _saveReadingProgress();
   }
 
   void _updateCurrentChapter() {
@@ -472,32 +513,13 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
         curve: Curves.easeInOut,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              '跳轉到：${_chapters[chapterIndex].Title ?? "第 ${chapterIndex + 1} 章"}'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      // 移除干擾性的 SnackBar 通知
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.book.title),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // Settings placeholder
-            },
-            tooltip: '設置',
-          ),
-        ],
-      ),
       drawer: Drawer(
         child: Column(
           children: [
@@ -537,6 +559,27 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
                 ],
               ),
             ),
+            // 返回按鈕
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // 先關閉 Drawer
+                    Navigator.of(context).pop(); // 再返回到上一個頁面
+                  },
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('返回書架'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ),
+            const Divider(),
             // 閱讀進度
             Container(
               padding: const EdgeInsets.all(16),
@@ -661,7 +704,7 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
               ),
             ),
             const Divider(),
-            // 導航控制
+            // 頁面導航控制
             Container(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -721,66 +764,202 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
           ],
         ),
       ),
-      body: Listener(
-        onPointerSignal: (pointerSignal) {
-          if (pointerSignal is PointerScrollEvent) {
-            // 向下滾動 (scrollDelta.dy > 0) = 下一頁
-            // 向上滾動 (scrollDelta.dy < 0) = 上一頁
-            if (pointerSignal.scrollDelta.dy > 0) {
-              _nextPage();
-            } else if (pointerSignal.scrollDelta.dy < 0) {
-              _previousPage();
-            }
-          }
-        },
-        child: PageView.builder(
-          controller: _pageController,
-          onPageChanged: _onPageChanged,
-          itemCount: _pages.length,
-          itemBuilder: (context, index) {
-            return GestureDetector(
-              onTapUp: (details) {
-                final screenWidth = MediaQuery.of(context).size.width;
-                if (details.globalPosition.dx < screenWidth / 3) {
-                  _previousPage();
-                } else if (details.globalPosition.dx > screenWidth * 2 / 3) {
+      body: Stack(
+        children: [
+          // EPUB 閱讀內容
+          Listener(
+            onPointerSignal: (pointerSignal) {
+              if (pointerSignal is PointerScrollEvent) {
+                // 向下滾動 (scrollDelta.dy > 0) = 下一頁
+                // 向上滾動 (scrollDelta.dy < 0) = 上一頁
+                if (pointerSignal.scrollDelta.dy > 0) {
                   _nextPage();
+                } else if (pointerSignal.scrollDelta.dy < 0) {
+                  _previousPage();
                 }
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        width: double.infinity,
-                        alignment: Alignment.topLeft,
-                        child: Text(
-                          index < _pages.length ? _pages[index] : 'Loading...',
-                          style: const TextStyle(
-                            fontSize: 16.0,
-                            height: 1.5,
+              }
+            },
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: _onPageChanged,
+              itemCount: _pages.length,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTapUp: (details) {
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    if (details.globalPosition.dx < screenWidth / 3) {
+                      _previousPage();
+                    } else if (details.globalPosition.dx >
+                        screenWidth * 2 / 3) {
+                      _nextPage();
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            alignment: Alignment.topLeft,
+                            child: Text(
+                              index < _pages.length
+                                  ? _pages[index]
+                                  : 'Loading...',
+                              style: const TextStyle(
+                                fontSize: 16.0,
+                                height: 1.5,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        // 底部完整導航控制區域
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8.0, horizontal: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              // 章節選單按鈕
+                              Builder(
+                                builder: (context) => InkWell(
+                                  onTap: () {
+                                    Scaffold.of(context).openDrawer();
+                                  },
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Icon(
+                                      Icons.list,
+                                      color: Colors.grey[600],
+                                      size: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // 第一頁
+                              InkWell(
+                                onTap: _currentPage > 0
+                                    ? () {
+                                        _pageController.animateToPage(
+                                          0,
+                                          duration:
+                                              const Duration(milliseconds: 300),
+                                          curve: Curves.easeInOut,
+                                        );
+                                      }
+                                    : null,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(
+                                    Icons.first_page,
+                                    color: _currentPage > 0
+                                        ? Colors.grey[600]
+                                        : Colors.grey[400],
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                              // 上一頁
+                              InkWell(
+                                onTap: _currentPage > 0 ? _previousPage : null,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(
+                                    Icons.chevron_left,
+                                    color: _currentPage > 0
+                                        ? Colors.grey[600]
+                                        : Colors.grey[400],
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                              // 頁碼顯示
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${index + 1}/${_pages.length}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              // 下一頁
+                              InkWell(
+                                onTap: _currentPage < _pages.length - 1
+                                    ? _nextPage
+                                    : null,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(
+                                    Icons.chevron_right,
+                                    color: _currentPage < _pages.length - 1
+                                        ? Colors.grey[600]
+                                        : Colors.grey[400],
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                              // 最後一頁
+                              InkWell(
+                                onTap: _currentPage < _pages.length - 1
+                                    ? () {
+                                        _pageController.animateToPage(
+                                          _pages.length - 1,
+                                          duration:
+                                              const Duration(milliseconds: 300),
+                                          curve: Curves.easeInOut,
+                                        );
+                                      }
+                                    : null,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(
+                                    Icons.last_page,
+                                    color: _currentPage < _pages.length - 1
+                                        ? Colors.grey[600]
+                                        : Colors.grey[400],
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                              // 返回按鈕
+                              InkWell(
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(
+                                    Icons.arrow_back,
+                                    color: Colors.grey[600],
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Page ${index + 1} of ${_pages.length}'),
-                          Text(
-                              '${((index + 1) / _pages.length * 100).toInt()}%'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
