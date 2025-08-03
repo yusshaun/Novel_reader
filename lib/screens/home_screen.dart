@@ -34,7 +34,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isLoading = false;
   int _selectedIndex = 1; // 預設選中 Shelves
-  
+
   // 導航項目
   final List<NavigationItem> _navigationItems = [
     NavigationItem(
@@ -44,7 +44,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ),
     NavigationItem(
       icon: Icons.folder,
-      label: 'Shelves', 
+      label: 'Shelves',
       title: 'Bookshelves',
     ),
     NavigationItem(
@@ -205,7 +205,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 itemBuilder: (context, index) {
                   final item = _navigationItems[index];
                   final isSelected = _selectedIndex == index;
-                  
+
                   return ListTile(
                     leading: Icon(
                       item.icon,
@@ -214,8 +214,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     title: Text(
                       item.label,
                       style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? Theme.of(context).primaryColor : null,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        color:
+                            isSelected ? Theme.of(context).primaryColor : null,
                       ),
                     ),
                     selected: isSelected,
@@ -264,7 +266,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildCurrentContent(List books, List bookshelves, List filteredBooks) {
+  Widget _buildCurrentContent(
+      List books, List bookshelves, List filteredBooks) {
     switch (_selectedIndex) {
       case 0: // Library
         return RefreshIndicator(
@@ -379,8 +382,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  gradient: shelf.coverImage != null 
-                      ? null 
+                  gradient: shelf.coverImage != null
+                      ? null
                       : LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -478,7 +481,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         else
                           // 如果有封面，顯示小標記
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.black.withOpacity(0.3),
                               borderRadius: BorderRadius.circular(8),
@@ -508,9 +512,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: (shelf.coverImage != null 
-                                    ? Colors.black 
-                                    : Colors.white).withOpacity(0.2),
+                                color: (shelf.coverImage != null
+                                        ? Colors.black
+                                        : Colors.white)
+                                    .withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(
@@ -525,8 +530,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const Spacer(),
                     // 書架名稱（增強可讀性）
                     Container(
-                      padding: shelf.coverImage != null 
-                          ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+                      padding: shelf.coverImage != null
+                          ? const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4)
                           : EdgeInsets.zero,
                       decoration: shelf.coverImage != null
                           ? BoxDecoration(
@@ -559,8 +565,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Consumer(
                       builder: (context, ref, child) {
                         return Container(
-                          padding: shelf.coverImage != null 
-                              ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
+                          padding: shelf.coverImage != null
+                              ? const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2)
                               : EdgeInsets.zero,
                           decoration: shelf.coverImage != null
                               ? BoxDecoration(

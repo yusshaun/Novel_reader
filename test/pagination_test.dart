@@ -6,41 +6,41 @@ void main() {
     test('Screen-based pagination calculation should work correctly', () {
       // 模擬螢幕尺寸
       const screenSize = Size(375, 812); // iPhone X 尺寸
-      
+
       // 計算可用高度
       const appBarHeight = 56.0;
       const bottomNavHeight = 56.0;
       const verticalPadding = 32.0;
       const pageInfoHeight = 50.0;
-      
-      final availableHeight = screenSize.height - 
-                             appBarHeight - 
-                             bottomNavHeight - 
-                             verticalPadding - 
-                             pageInfoHeight;
-      
+
+      final availableHeight = screenSize.height -
+          appBarHeight -
+          bottomNavHeight -
+          verticalPadding -
+          pageInfoHeight;
+
       // 字體設定
       const fontSize = 16.0;
       const lineHeight = 1.5;
       const actualLineHeight = fontSize * lineHeight;
-      
+
       // 計算每頁可顯示的行數
       final linesPerPage = (availableHeight / actualLineHeight).floor();
-      
+
       // 估算每行平均字符數
       const horizontalPadding = 32.0;
       final availableWidth = screenSize.width - horizontalPadding;
       final avgCharWidth = fontSize * 0.6;
       final charsPerLine = (availableWidth / avgCharWidth).floor();
-      
+
       // 計算每頁字符數
       final charsPerPage = (linesPerPage * charsPerLine * 0.8).floor();
-      
+
       expect(linesPerPage, greaterThan(0));
       expect(charsPerLine, greaterThan(0));
       expect(charsPerPage, greaterThan(0));
       expect(charsPerPage, lessThan(3000)); // 合理的上限
-      
+
       print('Screen: ${screenSize.width}x${screenSize.height}');
       print('Available height: $availableHeight');
       print('Lines per page: $linesPerPage');
@@ -56,25 +56,27 @@ void main() {
 
 這是第三段文字。最後一段用來測試完整的分頁流程。''';
 
-      final pages = _paginateTextByCharacterCount(testText, 100); // 使用較小的頁面大小進行測試
-      
+      final pages =
+          _paginateTextByCharacterCount(testText, 100); // 使用較小的頁面大小進行測試
+
       expect(pages.length, greaterThan(1)); // 應該分成多頁
-      expect(pages.every((page) => page.length <= 120), isTrue); // 每頁不應該超過限制太多（考慮段落完整性）
-      expect(pages.join('\n\n').replaceAll(RegExp(r'\n+'), '\n'), 
-             contains('這是第一段文字')); // 確保內容完整性
+      expect(pages.every((page) => page.length <= 120),
+          isTrue); // 每頁不應該超過限制太多（考慮段落完整性）
+      expect(pages.join('\n\n').replaceAll(RegExp(r'\n+'), '\n'),
+          contains('這是第一段文字')); // 確保內容完整性
     });
 
     test('Screen size change should trigger re-pagination', () {
       // 測試螢幕尺寸變化時的重新分頁
       const size1 = Size(375, 812);
       const size2 = Size(812, 375); // 橫屏
-      
+
       expect(size1, isNot(equals(size2)));
-      
+
       // 計算不同螢幕尺寸下的字符數
       final chars1 = _calculateCharsPerPage(size1);
       final chars2 = _calculateCharsPerPage(size2);
-      
+
       expect(chars1, isNot(equals(chars2))); // 不同螢幕尺寸應該有不同的分頁設定
     });
   });
@@ -122,23 +124,23 @@ int _calculateCharsPerPage(Size screenSize) {
   const bottomNavHeight = 56.0;
   const verticalPadding = 32.0;
   const pageInfoHeight = 50.0;
-  
-  final availableHeight = screenSize.height - 
-                         appBarHeight - 
-                         bottomNavHeight - 
-                         verticalPadding - 
-                         pageInfoHeight;
-  
+
+  final availableHeight = screenSize.height -
+      appBarHeight -
+      bottomNavHeight -
+      verticalPadding -
+      pageInfoHeight;
+
   const fontSize = 16.0;
   const lineHeight = 1.5;
   const actualLineHeight = fontSize * lineHeight;
-  
+
   final linesPerPage = (availableHeight / actualLineHeight).floor();
-  
+
   const horizontalPadding = 32.0;
   final availableWidth = screenSize.width - horizontalPadding;
   final avgCharWidth = fontSize * 0.6;
   final charsPerLine = (availableWidth / avgCharWidth).floor();
-  
+
   return (linesPerPage * charsPerLine * 0.8).floor();
 }

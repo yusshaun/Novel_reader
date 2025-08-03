@@ -34,11 +34,11 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     // 檢查螢幕尺寸是否改變
     final currentSize = MediaQuery.of(context).size;
-    if (_lastScreenSize != null && 
-        _lastScreenSize != currentSize && 
+    if (_lastScreenSize != null &&
+        _lastScreenSize != currentSize &&
         _originalText.isNotEmpty) {
       print('Screen size changed, re-paginating...');
       _repaginateContent();
@@ -48,27 +48,30 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
 
   void _repaginateContent() {
     if (_originalText.isEmpty) return;
-    
-    final currentPageRatio = _pages.isNotEmpty ? _currentPage / _pages.length : 0.0;
-    
+
+    final currentPageRatio =
+        _pages.isNotEmpty ? _currentPage / _pages.length : 0.0;
+
     setState(() {
       _pages.clear();
       _chapterPageMapping.clear();
-      
+
       // 重新分頁
       final newPages = _paginateText(_originalText);
       _pages.addAll(newPages);
-      
+
       // 嘗試保持相對位置
-      _currentPage = (newPages.length * currentPageRatio).round().clamp(0, newPages.length - 1);
-      
+      _currentPage = (newPages.length * currentPageRatio)
+          .round()
+          .clamp(0, newPages.length - 1);
+
       // 重新計算章節映射（簡化版本）
       if (_chapters.isNotEmpty) {
         _chapterPageMapping[0] = 0;
         _updateCurrentChapter();
       }
     });
-    
+
     print('Re-paginated: ${_pages.length} pages, current page: $_currentPage');
   }
 
@@ -337,42 +340,45 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
 
   List<String> _paginateTextByScreenSize(String text) {
     final screenSize = MediaQuery.of(context).size;
-    
+
     // 考慮 AppBar、底部導航欄和 padding 的高度
     const appBarHeight = 56.0;
     const bottomNavHeight = 56.0;
     const verticalPadding = 32.0; // 上下各16
     const pageInfoHeight = 50.0; // 頁面信息區域
-    
-    final availableHeight = screenSize.height - 
-                           appBarHeight - 
-                           bottomNavHeight - 
-                           verticalPadding - 
-                           pageInfoHeight;
-    
+
+    final availableHeight = screenSize.height -
+        appBarHeight -
+        bottomNavHeight -
+        verticalPadding -
+        pageInfoHeight;
+
     // 字體設定
     const fontSize = 16.0;
     const lineHeight = 1.5;
     const actualLineHeight = fontSize * lineHeight;
-    
+
     // 計算每頁可顯示的行數
     final linesPerPage = (availableHeight / actualLineHeight).floor();
-    
+
     // 估算每行平均字符數（基於螢幕寬度）
     const horizontalPadding = 32.0; // 左右各16
     final availableWidth = screenSize.width - horizontalPadding;
     final avgCharWidth = fontSize * 0.6; // 估算中文字符寬度
     final charsPerLine = (availableWidth / avgCharWidth).floor();
-    
+
     // 計算每頁字符數
-    final charsPerPage = (linesPerPage * charsPerLine * 0.8).floor(); // 0.8是安全係數
-    
-    print('Screen-based pagination: ${linesPerPage} lines/page, ${charsPerLine} chars/line, ${charsPerPage} chars/page');
-    
+    final charsPerPage =
+        (linesPerPage * charsPerLine * 0.8).floor(); // 0.8是安全係數
+
+    print(
+        'Screen-based pagination: ${linesPerPage} lines/page, ${charsPerLine} chars/line, ${charsPerPage} chars/page');
+
     return _paginateTextByCharacterCount(text, charsPerPage);
   }
 
-  List<String> _paginateTextByCharacterCount(String text, int charactersPerPage) {
+  List<String> _paginateTextByCharacterCount(
+      String text, int charactersPerPage) {
     final pages = <String>[];
     final paragraphs = text.split(RegExp(r'\n{2,}')); // 以兩個以上換行分段
     final buffer = StringBuffer();
