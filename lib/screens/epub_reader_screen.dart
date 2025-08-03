@@ -449,135 +449,6 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
     }
   }
 
-  void _showChapterSelector() {
-    if (_chapters.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('沒有可用的章節'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: Column(
-            children: [
-              // 標題欄
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey, width: 0.5),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.list_alt, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    const Text(
-                      '章節目錄',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '共 ${_chapters.length} 章',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 章節列表
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _chapters.length,
-                  itemBuilder: (context, index) {
-                    final chapter = _chapters[index];
-                    final isCurrentChapter = index == _currentChapterIndex;
-                    final startPage = _chapterPageMapping[index] ?? 0;
-                    final nextChapterPage = index < _chapters.length - 1
-                        ? _chapterPageMapping[index + 1] ?? _pages.length
-                        : _pages.length;
-                    final chapterPageCount = nextChapterPage - startPage;
-
-                    return ListTile(
-                      leading: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color:
-                              isCurrentChapter ? Colors.blue : Colors.grey[200],
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              color: isCurrentChapter
-                                  ? Colors.white
-                                  : Colors.grey[600],
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                      title: Text(
-                        chapter.Title ?? '第 ${index + 1} 章',
-                        style: TextStyle(
-                          fontWeight: isCurrentChapter
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: isCurrentChapter ? Colors.blue : Colors.black,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        '第 ${startPage + 1} 頁 • $chapterPageCount 頁',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                      trailing: isCurrentChapter
-                          ? Icon(Icons.play_circle_filled, color: Colors.blue)
-                          : Icon(Icons.arrow_forward_ios,
-                              size: 16, color: Colors.grey[400]),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _goToChapter(index);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   void _goToChapter(int chapterIndex) {
     if (chapterIndex >= 0 && chapterIndex < _chapters.length) {
       final startPage = _chapterPageMapping[chapterIndex] ?? 0;
@@ -604,11 +475,6 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
-            icon: const Icon(Icons.list_alt),
-            onPressed: _showChapterSelector,
-            tooltip: '章節目錄',
-          ),
-          IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
               // Settings placeholder
@@ -616,6 +482,227 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
             tooltip: '設置',
           ),
         ],
+      ),
+      drawer: Drawer(
+        child: Column(
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.book,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.book.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (widget.book.author.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.book.author,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            // 閱讀進度
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '閱讀進度',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: _pages.isNotEmpty
+                        ? (_currentPage + 1) / _pages.length
+                        : 0,
+                    backgroundColor: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Page ${_currentPage + 1} of ${_pages.length}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      Text(
+                        '${((_currentPage + 1) / _pages.length * 100).toInt()}%',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            // 章節目錄
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: Row(
+                      children: [
+                        Icon(Icons.list_alt, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          '章節目錄',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: _chapters.isEmpty
+                        ? const Center(
+                            child: Text(
+                              '沒有章節資訊',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _chapters.length,
+                            itemBuilder: (context, index) {
+                              final chapter = _chapters[index];
+                              final isCurrentChapter =
+                                  index == _currentChapterIndex;
+
+                              return ListTile(
+                                dense: true,
+                                leading: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: isCurrentChapter
+                                        ? Theme.of(context).primaryColor
+                                        : Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: isCurrentChapter
+                                            ? Colors.white
+                                            : Colors.black54,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  chapter.Title ?? '第 ${index + 1} 章',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: isCurrentChapter
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isCurrentChapter
+                                        ? Theme.of(context).primaryColor
+                                        : null,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                selected: isCurrentChapter,
+                                onTap: () {
+                                  _goToChapter(index);
+                                  Navigator.pop(context); // 關閉 drawer
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            // 導航控制
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.first_page),
+                    onPressed: _currentPage > 0
+                        ? () {
+                            setState(() {
+                              _currentPage = 0;
+                            });
+                            _updateCurrentChapter();
+                            Navigator.pop(context);
+                          }
+                        : null,
+                    tooltip: '第一頁',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: _currentPage > 0
+                        ? () {
+                            _previousPage();
+                            Navigator.pop(context);
+                          }
+                        : null,
+                    tooltip: '上一頁',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_forward),
+                    onPressed: _currentPage < _pages.length - 1
+                        ? () {
+                            _nextPage();
+                            Navigator.pop(context);
+                          }
+                        : null,
+                    tooltip: '下一頁',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.last_page),
+                    onPressed: _currentPage < _pages.length - 1
+                        ? () {
+                            setState(() {
+                              _currentPage = _pages.length - 1;
+                            });
+                            _updateCurrentChapter();
+                            Navigator.pop(context);
+                          }
+                        : null,
+                    tooltip: '最後一頁',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       body: GestureDetector(
         onTapUp: (details) {
@@ -643,34 +730,30 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
                   ),
                 ),
               ),
+              // 簡化的底部資訊
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Page ${_currentPage + 1} of ${_pages.length}',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          if (_chapters.isNotEmpty &&
-                              _currentChapterIndex < _chapters.length)
-                            Text(
-                              _chapters[_currentChapterIndex].Title ??
-                                  '第 ${_currentChapterIndex + 1} 章',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[600],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
+                    Text(
+                      'Page ${_currentPage + 1} of ${_pages.length}',
+                      style: const TextStyle(fontSize: 12),
                     ),
+                    if (_chapters.isNotEmpty &&
+                        _currentChapterIndex < _chapters.length)
+                      Flexible(
+                        child: Text(
+                          _chapters[_currentChapterIndex].Title ??
+                              '第 ${_currentChapterIndex + 1} 章',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     Text(
                         '${((_currentPage + 1) / _pages.length * 100).toInt()}%'),
                   ],
@@ -678,46 +761,6 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen> {
               ),
             ],
           ),
-        ),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: _currentPage > 0 ? _previousPage : null,
-              tooltip: '上一頁',
-            ),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${_currentPage + 1} / ${_pages.length}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  if (_chapters.isNotEmpty &&
-                      _currentChapterIndex < _chapters.length)
-                    Text(
-                      _chapters[_currentChapterIndex].Title ??
-                          '第 ${_currentChapterIndex + 1} 章',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                ],
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.arrow_forward),
-              onPressed: _currentPage < _pages.length - 1 ? _nextPage : null,
-              tooltip: '下一頁',
-            ),
-          ],
         ),
       ),
     );
