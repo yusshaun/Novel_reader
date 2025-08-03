@@ -31,17 +31,17 @@ void main() async {
   await Hive.openBox<BookShelf>('bookshelves');
   await Hive.openBox<ReaderTheme>('reader_theme');
 
-  // 清理舊的進度數據（臨時）
+  // 打開閱讀進度盒子
   try {
     final progressBox = await Hive.openBox<ReadingProgress>('reading_progress');
-    // 清除舊的不兼容格式的數據
-    await progressBox.clear();
-    print('Cleared old reading progress data');
+    print(
+        'Reading progress box opened successfully with ${progressBox.length} records');
   } catch (e) {
-    print('Error clearing progress box: $e');
+    print('Error opening progress box: $e');
     // 如果打開失敗，刪除舊盒子並重新創建
     await Hive.deleteBoxFromDisk('reading_progress');
     await Hive.openBox<ReadingProgress>('reading_progress');
+    print('Created new reading progress box');
   }
 
   final savedThemeMode = await AdaptiveTheme.getThemeMode();
@@ -53,13 +53,65 @@ void main() async {
   );
 }
 
-class NovelReaderApp extends StatelessWidget {
+class NovelReaderApp extends StatefulWidget {
   final AdaptiveThemeMode? savedThemeMode;
 
   const NovelReaderApp({
     super.key,
     this.savedThemeMode,
   });
+
+  @override
+  State<NovelReaderApp> createState() => _NovelReaderAppState();
+}
+
+class _NovelReaderAppState extends State<NovelReaderApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // 監聽應用生命週期，確保關閉應用時保存所有數據
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // 當應用即將關閉或進入後台時，確保 Hive 數據已保存
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _ensureDataSaved();
+    }
+  }
+
+  // 確保所有數據已保存到磁碟
+  void _ensureDataSaved() async {
+    try {
+      // 強制將所有 Hive 盒子的數據刷新到磁碟
+      final boxes = [
+        'books',
+        'bookshelves',
+        'reader_theme',
+        'reading_progress'
+      ];
+
+      for (final boxName in boxes) {
+        if (Hive.isBoxOpen(boxName)) {
+          final box = Hive.box(boxName);
+          await box.flush();
+        }
+      }
+      print('✅ All Hive data flushed to disk safely');
+    } catch (e) {
+      print('❌ Error flushing Hive data: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +130,7 @@ class NovelReaderApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      initial: savedThemeMode ?? AdaptiveThemeMode.system,
+      initial: widget.savedThemeMode ?? AdaptiveThemeMode.system,
       builder: (theme, darkTheme) => MaterialApp(
         title: 'Novel Reader',
         theme: theme,

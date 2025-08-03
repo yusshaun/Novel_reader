@@ -22,18 +22,29 @@ class ReadingProgressNotifier
   final _uuid = const Uuid();
 
   ReadingProgressNotifier(this._box) : super(_loadProgress(_box)) {
-    // Note: Hive 2.x doesn't have listenable, we'll manually refresh
+    // Note: Hive 2.x doesn't have listenable, we'll manually refresh when needed
+  }
+
+  // 刷新狀態，重新載入所有進度數據
+  void refresh() {
+    state = _loadProgress(_box);
+    print('Reading progress provider refreshed with ${state.length} records');
   }
 
   static Map<String, ReadingProgress> _loadProgress(Box<ReadingProgress> box) {
     final Map<String, ReadingProgress> progressMap = {};
+    print('Loading reading progress from Hive box with ${box.length} items');
+
     // 由於我們現在使用 bookId 作為 key，可以直接使用 box 的 keys 和 values
     for (final key in box.keys) {
       final progress = box.get(key);
       if (progress != null) {
         progressMap[key.toString()] = progress;
+        print(
+            'Loaded progress for bookId: ${key.toString()}, page: ${progress.lastPage}');
       }
     }
+    print('Total loaded progress records: ${progressMap.length}');
     return progressMap;
   }
 
@@ -126,13 +137,16 @@ class ReadingProgressNotifier
       );
     }
 
-    // 異步保存，但不等待完成
+    // 立即保存並刷新到磁碟，用於應用關閉或銷毀時
     Future.microtask(() async {
       try {
         await _box.put(bookId, progress);
+        // 立即刷新到磁碟，確保數據持久化
+        await _box.flush();
         state = {...state, bookId: progress};
+        print('✅ Progress saved and flushed to disk for bookId: $bookId');
       } catch (e) {
-        print('Failed to save progress: $e');
+        print('❌ Failed to save and flush progress: $e');
       }
     });
   }

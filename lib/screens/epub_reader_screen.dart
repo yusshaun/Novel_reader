@@ -40,29 +40,41 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
     _loadBook();
   }
 
-  // 載入初始閱讀進度
+  // 載入初始閱讀進度（僅設置初始頁面，真正跳轉在書本載入後）
   void _loadInitialProgress() {
     print('Loading initial progress for bookId: ${widget.book.id}');
-    final progressMap = ref.read(readingProgressProvider);
-    final progress = progressMap[widget.book.id];
 
-    if (progress != null) {
-      // 先設定頁面，稍後在書本載入完成後會調整
-      // 進度保存時是 +1 的，所以載入時要 -1 轉換回索引
-      _currentPage = (progress.lastPage - 1).clamp(0, 999999);
-      print(
-          'Found initial progress: display page ${progress.lastPage}, index $_currentPage');
-    } else {
-      print('No initial progress found for bookId: ${widget.book.id}');
-    }
+    // 延遲讀取避免在 widget 生命週期中修改 provider
+    Future(() {
+      final progressMap = ref.read(readingProgressProvider);
+      final progress = progressMap[widget.book.id];
+
+      print('Available progress records: ${progressMap.keys.toList()}');
+
+      if (progress != null && mounted) {
+        // 設置初始頁面為上次閱讀的頁面，實際跳轉會在 _loadReadingProgress 中發生
+        final lastReadPage = (progress.lastPage - 1).clamp(0, 999999);
+        if (mounted) {
+          setState(() {
+            _currentPage = lastReadPage;
+          });
+        }
+        print(
+            'Set initial page: last read display page ${progress.lastPage}, same page index $_currentPage');
+      } else {
+        print('No initial progress found for bookId: ${widget.book.id}');
+      }
+    });
   }
 
   @override
   void dispose() {
     // 移除應用狀態監聽器
     WidgetsBinding.instance.removeObserver(this);
-    // 在銷毀前最後一次保存進度
-    _saveReadingProgressSync();
+    // 在銷毀前最後一次保存進度（但要檢查 mounted 狀態）
+    if (mounted) {
+      _saveReadingProgressSync();
+    }
     _pageController.dispose();
     super.dispose();
   }
@@ -154,39 +166,56 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
   // 載入閱讀進度
   void _loadReadingProgress() {
     print('Loading progress for bookId: ${widget.book.id}');
-    final progressMap = ref.read(readingProgressProvider);
-    final progress = progressMap[widget.book.id];
 
-    if (progress != null && _pages.isNotEmpty) {
-      // 進度保存時是 +1 的，所以載入時要 -1 轉換回索引
-      final targetPage = (progress.lastPage - 1).clamp(0, _pages.length - 1);
+    // 延遲執行避免在 widget 生命週期中修改 provider，並確保 PageController 準備好
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (!mounted) return;
 
-      // 如果目標頁面與當前頁面不同，則跳轉
-      if (targetPage != _currentPage) {
+      // 先刷新 provider 確保數據是最新的
+      ref.read(readingProgressProvider.notifier).refresh();
+
+      final progressMap = ref.read(readingProgressProvider);
+      final progress = progressMap[widget.book.id];
+
+      if (progress != null && _pages.isNotEmpty && mounted) {
+        // progress.lastPage 是保存的顯示頁面（從1開始）
+        // 載入到上次閱讀的確切頁面
+        final lastReadPage = progress.lastPage - 1; // 轉換為索引（從0開始）
+        final targetPage = lastReadPage.clamp(0, _pages.length - 1);
+
+        print(
+            '📖 Progress found: last display page ${progress.lastPage}, loading same page ${targetPage + 1} (index: $targetPage)');
+        print('📖 Current page before jump: $_currentPage');
+
+        // 更新當前頁面並跳轉（即使頁面相同也要跳轉以確保 UI 更新）
         setState(() {
           _currentPage = targetPage;
         });
 
-        // 使用 animateToPage 平滑跳轉到目標頁面
+        // 確保 PageController 準備好後再跳轉
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_pageController.hasClients) {
+          if (_pageController.hasClients && mounted) {
+            print('📖 Jumping to page: $targetPage');
             _pageController.animateToPage(
               _currentPage,
-              duration: const Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOut,
             );
+          } else {
+            print('❌ PageController not ready for jump');
           }
         });
+
+        _updateCurrentChapter();
+
+        print(
+            '✅ Loaded reading progress: last read display page ${progress.lastPage}, continuing from same page ${_currentPage + 1} (index: $_currentPage)');
+      } else {
+        print(
+            '❌ No progress found for bookId: ${widget.book.id}, available keys: ${progressMap.keys.toList()}');
+        print('❌ Pages available: ${_pages.length}, mounted: $mounted');
       }
-
-      _updateCurrentChapter();
-
-      print(
-          '✅ Loaded reading progress: display page ${progress.lastPage}, adjusted to index: $_currentPage');
-    } else {
-      print(
-          '❌ No progress found for bookId: ${widget.book.id}, available keys: ${progressMap.keys.toList()}');
-    }
+    });
   }
 
   Future<void> _loadBook() async {
