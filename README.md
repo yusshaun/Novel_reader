@@ -1,1 +1,1 @@
-全ai的epub閱讀器
+全用ai做的epub閱讀器
