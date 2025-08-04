@@ -34,7 +34,8 @@ void main() async {
   // 打開閱讀進度盒子
   try {
     final progressBox = await Hive.openBox<ReadingProgress>('reading_progress');
-    print('Reading progress box opened successfully with ${progressBox.length} records');
+    print(
+        'Reading progress box opened successfully with ${progressBox.length} records');
   } catch (e) {
     print('Error opening progress box: $e');
     // 如果打開失敗，刪除舊盒子並重新創建

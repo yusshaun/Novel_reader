@@ -1141,24 +1141,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         Colors.teal,
                         Colors.pink,
                         Colors.brown,
-                      ].map((color) => GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedColor = color;
-                          });
-                        },
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                            border: selectedColor == color
-                                ? Border.all(color: Colors.black, width: 2)
-                                : null,
-                          ),
-                        ),
-                      )).toList(),
+                      ]
+                          .map((color) => GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    selectedColor = color;
+                                  });
+                                },
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                    border: selectedColor == color
+                                        ? Border.all(
+                                            color: Colors.black, width: 2)
+                                        : null,
+                                  ),
+                                ),
+                              ))
+                          .toList(),
                     ),
                   ),
                 ],
@@ -1176,13 +1179,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (name.isNotEmpty) {
                   try {
                     await ref.read(bookshelvesProvider.notifier).createShelf(
-                      name: name,
-                      themeColor: selectedColor,
-                      description: descriptionController.text.trim().isEmpty
-                          ? null
-                          : descriptionController.text.trim(),
-                    );
-                    
+                          name: name,
+                          themeColor: selectedColor,
+                          description: descriptionController.text.trim().isEmpty
+                              ? null
+                              : descriptionController.text.trim(),
+                        );
+
                     if (mounted) {
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
