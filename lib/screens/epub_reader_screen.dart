@@ -515,16 +515,18 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
   List<String> _paginateTextByScreenSize(String text) {
     final screenSize = MediaQuery.of(context).size;
 
-    // 考慮 AppBar、底部導航欄和 padding 的高度
+    // 考慮 AppBar、底部工具列和 padding 的高度
     const appBarHeight = 56.0;
-    const bottomNavHeight = 56.0;
-    const verticalPadding = 32.0; // 上下各16
-    const pageInfoHeight = 50.0; // 頁面信息區域
+    const bottomToolbarHeight = 60.0; // 新的固定工具列高度
+    const verticalPadding = 32.0; // 上下各16，回到原來的設定
+    const bottomSpacing = 60.0; // 減少底部間距，從 80 改為 60
+    const pageInfoHeight = 20.0; // 減少頁面信息區域，從 50 改為 20
 
     final availableHeight = screenSize.height -
         appBarHeight -
-        bottomNavHeight -
+        bottomToolbarHeight -
         verticalPadding -
+        bottomSpacing -
         pageInfoHeight;
 
     // 字體設定
@@ -532,8 +534,9 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
     const lineHeight = 1.5;
     const actualLineHeight = fontSize * lineHeight;
 
-    // 計算每頁可顯示的行數
-    final linesPerPage = (availableHeight / actualLineHeight).floor();
+    // 計算每頁可顯示的行數，確保最後一行有足夠空間
+    final maxLinesPerPage = (availableHeight / actualLineHeight).floor();
+    final linesPerPage = maxLinesPerPage > 0 ? maxLinesPerPage - 1 : 0; // 減少一行確保完整顯示
 
     // 估算每行平均字符數（基於螢幕寬度）
     const horizontalPadding = 32.0; // 左右各16
@@ -908,226 +911,240 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
                 }
               }
             },
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: _onPageChanged,
-              itemCount: _pages.length,
-              itemBuilder: (context, index) {
-                // 確保索引在有效範圍內
-                if (index >= _pages.length) {
-                  print('⚠️ Invalid page index: $index >= ${_pages.length}');
-                  return Container(
-                    padding: const EdgeInsets.all(16.0),
-                    child: const Center(
-                      child: Text(
-                        '頁面索引錯誤',
-                        style: TextStyle(fontSize: 18),
+            child: Container(
+              // 調整底部內邊距，確保文字不被遮擋
+              padding: const EdgeInsets.only(bottom: 70), // 從 80 減少到 70
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                itemCount: _pages.length,
+                itemBuilder: (context, index) {
+                  // 確保索引在有效範圍內
+                  if (index >= _pages.length) {
+                    print('⚠️ Invalid page index: $index >= ${_pages.length}');
+                    return Container(
+                      padding: const EdgeInsets.all(16.0),
+                      child: const Center(
+                        child: Text(
+                          '頁面索引錯誤',
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    );
+                  }
+
+                  // 顯示調試資訊（僅在最後幾頁）
+                  if (index >= _pages.length - 3) {
+                    print(
+                        '📖 Rendering page $index of ${_pages.length - 1} (total: ${_pages.length})');
+                  }
+
+                  return GestureDetector(
+                    onTapUp: (details) {
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      if (details.globalPosition.dx < screenWidth / 3) {
+                        _previousPage();
+                      } else if (details.globalPosition.dx >
+                          screenWidth * 2 / 3) {
+                        _nextPage();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0), // 統一內邊距，避免底部過多
+                      child: Container(
+                        width: double.infinity,
+                        alignment: Alignment.topLeft,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 在最後一頁顯示額外資訊
+                            if (index == _pages.length - 1)
+                              Container(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Text(
+                                  '--- 最後一頁 (${index + 1}/${_pages.length}) ---',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: Text(
+                                  index < _pages.length
+                                      ? _pages[index]
+                                      : 'Loading...',
+                                  style: const TextStyle(
+                                    fontSize: 16.0,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
-                }
-
-                // 顯示調試資訊（僅在最後幾頁）
-                if (index >= _pages.length - 3) {
-                  print(
-                      '📖 Rendering page $index of ${_pages.length - 1} (total: ${_pages.length})');
-                }
-
-                return GestureDetector(
-                  onTapUp: (details) {
-                    final screenWidth = MediaQuery.of(context).size.width;
-                    if (details.globalPosition.dx < screenWidth / 3) {
-                      _previousPage();
-                    } else if (details.globalPosition.dx >
-                        screenWidth * 2 / 3) {
-                      _nextPage();
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            width: double.infinity,
-                            alignment: Alignment.topLeft,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 在最後一頁顯示額外資訊
-                                if (index == _pages.length - 1)
-                                  Container(
-                                    padding: const EdgeInsets.only(bottom: 8.0),
-                                    child: Text(
-                                      '--- 最後一頁 (${index + 1}/${_pages.length}) ---',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
-                                  ),
-                                Expanded(
-                                  child: Text(
-                                    index < _pages.length
-                                        ? _pages[index]
-                                        : 'Loading...',
-                                    style: const TextStyle(
-                                      fontSize: 16.0,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                },
+              ),
+            ),
+          ),
+          // 固定在底部的工具列
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.grey[300]!,
+                    width: 0.5,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // 章節選單按鈕
+                  Builder(
+                    builder: (context) => InkWell(
+                      onTap: () {
+                        Scaffold.of(context).openDrawer();
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.list,
+                          color: Colors.grey[600],
+                          size: 20,
                         ),
-                        // 底部完整導航控制區域
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8.0, horizontal: 8.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              // 章節選單按鈕
-                              Builder(
-                                builder: (context) => InkWell(
-                                  onTap: () {
-                                    Scaffold.of(context).openDrawer();
-                                  },
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Icon(
-                                      Icons.list,
-                                      color: Colors.grey[600],
-                                      size: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // 第一頁
-                              InkWell(
-                                onTap: _currentPage > 0
-                                    ? () {
-                                        _pageController.animateToPage(
-                                          0,
-                                          duration:
-                                              const Duration(milliseconds: 300),
-                                          curve: Curves.easeInOut,
-                                        );
-                                      }
-                                    : null,
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Icon(
-                                    Icons.first_page,
-                                    color: _currentPage > 0
-                                        ? Colors.grey[600]
-                                        : Colors.grey[400],
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                              // 上一頁
-                              InkWell(
-                                onTap: _currentPage > 0 ? _previousPage : null,
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Icon(
-                                    Icons.chevron_left,
-                                    color: _currentPage > 0
-                                        ? Colors.grey[600]
-                                        : Colors.grey[400],
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                              // 頁碼顯示
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '${index + 1}/${_pages.length}',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey[700],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              // 下一頁
-                              InkWell(
-                                onTap: _currentPage < _pages.length - 1
-                                    ? _nextPage
-                                    : null,
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Icon(
-                                    Icons.chevron_right,
-                                    color: _currentPage < _pages.length - 1
-                                        ? Colors.grey[600]
-                                        : Colors.grey[400],
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                              // 最後一頁
-                              InkWell(
-                                onTap: _currentPage < _pages.length - 1
-                                    ? () {
-                                        _pageController.animateToPage(
-                                          _pages.length - 1,
-                                          duration:
-                                              const Duration(milliseconds: 300),
-                                          curve: Curves.easeInOut,
-                                        );
-                                      }
-                                    : null,
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Icon(
-                                    Icons.last_page,
-                                    color: _currentPage < _pages.length - 1
-                                        ? Colors.grey[600]
-                                        : Colors.grey[400],
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                              // 返回按鈕
-                              InkWell(
-                                onTap: () {
-                                  // 在返回前保存進度
-                                  _saveReadingProgressSync();
-                                  Navigator.of(context).pop();
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Icon(
-                                    Icons.arrow_back,
-                                    color: Colors.grey[600],
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                );
-              },
+                  // 第一頁
+                  InkWell(
+                    onTap: _currentPage > 0
+                        ? () {
+                            _pageController.animateToPage(
+                              0,
+                              duration:
+                                  const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          }
+                        : null,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.first_page,
+                        color: _currentPage > 0
+                            ? Colors.grey[600]
+                            : Colors.grey[400],
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  // 上一頁
+                  InkWell(
+                    onTap: _currentPage > 0 ? _previousPage : null,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.chevron_left,
+                        color: _currentPage > 0
+                            ? Colors.grey[600]
+                            : Colors.grey[400],
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  // 頁碼顯示
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${_currentPage + 1}/${_pages.length}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  // 下一頁
+                  InkWell(
+                    onTap: _currentPage < _pages.length - 1
+                        ? _nextPage
+                        : null,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.chevron_right,
+                        color: _currentPage < _pages.length - 1
+                            ? Colors.grey[600]
+                            : Colors.grey[400],
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  // 最後一頁
+                  InkWell(
+                    onTap: _currentPage < _pages.length - 1
+                        ? () {
+                            _pageController.animateToPage(
+                              _pages.length - 1,
+                              duration:
+                                  const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          }
+                        : null,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.last_page,
+                        color: _currentPage < _pages.length - 1
+                            ? Colors.grey[600]
+                            : Colors.grey[400],
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  // 返回按鈕
+                  InkWell(
+                    onTap: () {
+                      // 在返回前保存進度
+                      _saveReadingProgressSync();
+                      Navigator.of(context).pop();
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.arrow_back,
+                        color: Colors.grey[600],
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
