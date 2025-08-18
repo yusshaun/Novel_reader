@@ -137,17 +137,17 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
     String? currentPageContent;
     String? searchKeywords;
     int? currentCharacterOffset;
-    
+
     if (_pages.isNotEmpty && _currentPage < _pages.length) {
       currentPageContent = _pages[_currentPage];
-      
+
       // 計算當前頁面在整個文本中的大概位置
       int totalCharsBeforeCurrentPage = 0;
       for (int i = 0; i < _currentPage && i < _pages.length; i++) {
         totalCharsBeforeCurrentPage += _pages[i].length;
       }
       currentCharacterOffset = totalCharsBeforeCurrentPage;
-      
+
       // 提取關鍵詞用於搜索（取中間部分，避免頁面邊界問題）
       if (currentPageContent.length > 100) {
         int startPos = currentPageContent.length ~/ 4;
@@ -156,7 +156,7 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
       } else if (currentPageContent.length > 20) {
         searchKeywords = currentPageContent.substring(0, 20).trim();
       }
-      
+
       print('Current page content length: ${currentPageContent.length}');
       print('Search keywords: $searchKeywords');
       print('Character offset: $currentCharacterOffset');
@@ -171,13 +171,13 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
 
       // 重新分頁並重建章節映射
       int currentPageIndex = 0;
-      
+
       for (int i = 0; i < _chapters.length; i++) {
         final chapter = _chapters[i];
-        
+
         // 記錄章節開始的頁面位置
         _chapterPageMapping[i] = currentPageIndex;
-        
+
         // 分頁章節內容
         final chapterText = _extractTextFromHtml(chapter.HtmlContent ?? '');
         if (chapterText.trim().isNotEmpty) {
@@ -219,7 +219,7 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
           estimatedOffset += _pages[i].length;
         }
       }
-      
+
       // 方法3: 如果前兩種方法都失敗，使用比例計算
       if (!foundMatch) {
         newPage = (_pages.length * currentPageRatio)
@@ -614,7 +614,8 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
 
     // 計算每頁可顯示的行數，確保最後一行有足夠空間
     final maxLinesPerPage = (availableHeight / actualLineHeight).floor();
-    final linesPerPage = maxLinesPerPage > 0 ? maxLinesPerPage - 1 : 0; // 減少一行確保完整顯示
+    final linesPerPage =
+        maxLinesPerPage > 0 ? maxLinesPerPage - 1 : 0; // 減少一行確保完整顯示
 
     // 估算每行平均字符數（基於螢幕寬度）
     const horizontalPadding = 32.0; // 左右各16
@@ -1028,7 +1029,8 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0), // 統一內邊距，避免底部過多
+                      padding: const EdgeInsets.fromLTRB(
+                          16.0, 16.0, 16.0, 16.0), // 統一內邊距，避免底部過多
                       child: Container(
                         width: double.infinity,
                         alignment: Alignment.topLeft,
@@ -1113,8 +1115,7 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
                         ? () {
                             _pageController.animateToPage(
                               0,
-                              duration:
-                                  const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 300),
                               curve: Curves.easeInOut,
                             );
                           }
@@ -1148,8 +1149,8 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
                   ),
                   // 頁碼顯示
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.grey[100],
                       borderRadius: BorderRadius.circular(8),
@@ -1165,9 +1166,7 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
                   ),
                   // 下一頁
                   InkWell(
-                    onTap: _currentPage < _pages.length - 1
-                        ? _nextPage
-                        : null,
+                    onTap: _currentPage < _pages.length - 1 ? _nextPage : null,
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
                       padding: const EdgeInsets.all(8),
@@ -1186,8 +1185,7 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
                         ? () {
                             _pageController.animateToPage(
                               _pages.length - 1,
-                              duration:
-                                  const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 300),
                               curve: Curves.easeInOut,
                             );
                           }

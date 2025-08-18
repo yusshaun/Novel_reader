@@ -65,11 +65,14 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? Theme.of(context).scaffoldBackgroundColor : Colors.grey[50],
+      backgroundColor: isDarkMode
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.grey[50],
       appBar: AppBar(
         title: Text(currentShelf.shelfName),
         backgroundColor: Color(currentShelf.themeColorValue),
-        foregroundColor: isDarkMode ? Theme.of(context).colorScheme.onSurface : Colors.white,
+        foregroundColor:
+            isDarkMode ? Theme.of(context).colorScheme.onSurface : Colors.white,
         leading: Row(
           children: [
             IconButton(
@@ -123,8 +126,11 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                         width: 64,
                         height: 64,
                         decoration: BoxDecoration(
-                          color: isDarkMode 
-                              ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                          color: isDarkMode
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.3)
                               : Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -183,7 +189,7 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: isDarkMode 
+                            color: isDarkMode
                                 ? Theme.of(context).colorScheme.onSurface
                                 : Colors.white,
                           ),
@@ -193,8 +199,11 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                           '${booksInShelf.length} 本書',
                           style: TextStyle(
                             fontSize: 14,
-                            color: isDarkMode 
-                                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.7)
+                            color: isDarkMode
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.7)
                                 : Colors.white70,
                           ),
                         ),
@@ -302,8 +311,11 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                     Icon(
                       Icons.book_outlined,
                       size: 64,
-                      color: isDarkMode 
-                          ? Theme.of(context).colorScheme.onSurface.withOpacity(0.4)
+                      color: isDarkMode
+                          ? Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.4)
                           : Colors.grey[400],
                     ),
                     const SizedBox(height: 16),
@@ -311,8 +323,11 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                       '這個書架還是空的',
                       style: TextStyle(
                         fontSize: 18,
-                        color: isDarkMode 
-                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                        color: isDarkMode
+                            ? Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6)
                             : Colors.grey[600],
                         fontWeight: FontWeight.w500,
                       ),
@@ -322,8 +337,11 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                       '使用側邊欄添加書籍',
                       style: TextStyle(
                         fontSize: 14,
-                        color: isDarkMode 
-                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                        color: isDarkMode
+                            ? Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5)
                             : Colors.grey[500],
                       ),
                     ),
@@ -352,7 +370,9 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
           : FloatingActionButton.extended(
               onPressed: _showAddBooksDialog,
               backgroundColor: Color(currentShelf.themeColorValue),
-              foregroundColor: isDarkMode ? Theme.of(context).colorScheme.onSurface : Colors.white,
+              foregroundColor: isDarkMode
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Colors.white,
               icon: const Icon(Icons.add),
               label: const Text('添加書籍'),
             ),
