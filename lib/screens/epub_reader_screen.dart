@@ -133,6 +133,35 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
   void _repaginateContent() {
     if (_originalText.isEmpty) return;
 
+    // 記錄當前閱讀位置的詳細信息
+    String? currentPageContent;
+    String? searchKeywords;
+    int? currentCharacterOffset;
+    
+    if (_pages.isNotEmpty && _currentPage < _pages.length) {
+      currentPageContent = _pages[_currentPage];
+      
+      // 計算當前頁面在整個文本中的大概位置
+      int totalCharsBeforeCurrentPage = 0;
+      for (int i = 0; i < _currentPage && i < _pages.length; i++) {
+        totalCharsBeforeCurrentPage += _pages[i].length;
+      }
+      currentCharacterOffset = totalCharsBeforeCurrentPage;
+      
+      // 提取關鍵詞用於搜索（取中間部分，避免頁面邊界問題）
+      if (currentPageContent.length > 100) {
+        int startPos = currentPageContent.length ~/ 4;
+        int endPos = startPos + 50;
+        searchKeywords = currentPageContent.substring(startPos, endPos).trim();
+      } else if (currentPageContent.length > 20) {
+        searchKeywords = currentPageContent.substring(0, 20).trim();
+      }
+      
+      print('Current page content length: ${currentPageContent.length}');
+      print('Search keywords: $searchKeywords');
+      print('Character offset: $currentCharacterOffset');
+    }
+
     final currentPageRatio =
         _pages.isNotEmpty ? _currentPage / _pages.length : 0.0;
 
@@ -140,20 +169,69 @@ class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
       _pages.clear();
       _chapterPageMapping.clear();
 
-      // 重新分頁
-      final newPages = _paginateText(_originalText);
-      _pages.addAll(newPages);
-
-      // 嘗試保持相對位置
-      _currentPage = (newPages.length * currentPageRatio)
-          .round()
-          .clamp(0, newPages.length - 1);
-
-      // 重新計算章節映射（簡化版本）
-      if (_chapters.isNotEmpty) {
-        _chapterPageMapping[0] = 0;
-        _updateCurrentChapter();
+      // 重新分頁並重建章節映射
+      int currentPageIndex = 0;
+      
+      for (int i = 0; i < _chapters.length; i++) {
+        final chapter = _chapters[i];
+        
+        // 記錄章節開始的頁面位置
+        _chapterPageMapping[i] = currentPageIndex;
+        
+        // 分頁章節內容
+        final chapterText = _extractTextFromHtml(chapter.HtmlContent ?? '');
+        if (chapterText.trim().isNotEmpty) {
+          final chapterPages = _paginateText(chapterText);
+          _pages.addAll(chapterPages);
+          currentPageIndex += chapterPages.length;
+        }
       }
+
+      print('Pages after repagination: ${_pages.length}');
+      print('Chapter mappings rebuilt: $_chapterPageMapping');
+
+      // 使用多種方法嘗試找到最佳的頁面位置
+      int newPage = 0;
+      bool foundMatch = false;
+
+      // 方法1: 使用關鍵詞搜索
+      if (searchKeywords != null && searchKeywords.isNotEmpty) {
+        for (int i = 0; i < _pages.length; i++) {
+          if (_pages[i].contains(searchKeywords)) {
+            newPage = i;
+            foundMatch = true;
+            print('Found match using keywords at page: $i');
+            break;
+          }
+        }
+      }
+
+      // 方法2: 如果關鍵詞搜索失敗，使用字符偏移量估算
+      if (!foundMatch && currentCharacterOffset != null) {
+        int estimatedOffset = 0;
+        for (int i = 0; i < _pages.length; i++) {
+          if (estimatedOffset >= currentCharacterOffset) {
+            newPage = i;
+            foundMatch = true;
+            print('Found match using character offset at page: $i');
+            break;
+          }
+          estimatedOffset += _pages[i].length;
+        }
+      }
+      
+      // 方法3: 如果前兩種方法都失敗，使用比例計算
+      if (!foundMatch) {
+        newPage = (_pages.length * currentPageRatio)
+            .round()
+            .clamp(0, _pages.length - 1);
+        print('Using ratio-based page calculation: $newPage');
+      }
+
+      _currentPage = newPage;
+
+      // 更新當前章節
+      _updateCurrentChapter();
 
       // 重新初始化 PageController 以確保正確的頁面狀態
       _pageController.dispose();
