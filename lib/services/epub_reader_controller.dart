@@ -41,12 +41,12 @@ class EpubReaderController with WidgetsBindingObserver {
     _contentManager = EpubContentManager();
     _paginationManager = PaginationManager();
     _progressManager = ReadingProgressManager(ref);
-    
+
     // 初始化頁面控制器
     _currentPage = _progressManager.loadInitialProgress(book);
     _pageController = PageController(initialPage: _currentPage);
     _navigationManager = NavigationManager(_pageController);
-    
+
     // 註冊應用狀態監聽器
     WidgetsBinding.instance.addObserver(this);
   }
@@ -55,7 +55,7 @@ class EpubReaderController with WidgetsBindingObserver {
   Future<void> initialize() async {
     // 載入書籍內容
     final loadResult = await _contentManager.loadBook(book);
-    
+
     if (!loadResult.isSuccess) {
       // 載入失敗的處理
       _paginationManager.pages.clear();
@@ -96,8 +96,8 @@ class EpubReaderController with WidgetsBindingObserver {
 
   /// 處理屏幕尺寸變化
   void handleScreenSizeChange(Size newSize) {
-    if (_lastScreenSize != null && 
-        _lastScreenSize != newSize && 
+    if (_lastScreenSize != null &&
+        _lastScreenSize != newSize &&
         _contentManager.originalText.isNotEmpty) {
       print('Screen size changed, re-paginating...');
       _repaginateContent(newSize);
@@ -125,13 +125,15 @@ class EpubReaderController with WidgetsBindingObserver {
     _pageController = PageController(initialPage: _currentPage);
     _navigationManager = NavigationManager(_pageController);
 
-    print('Re-paginated: ${_paginationManager.pages.length} pages, current page: $_currentPage');
+    print(
+        'Re-paginated: ${_paginationManager.pages.length} pages, current page: $_currentPage');
     onStateChanged();
   }
 
   /// 頁面導航方法
   void nextPage() {
-    _navigationManager.nextPage(_currentPage, _paginationManager.pages.length, _onPageChanged);
+    _navigationManager.nextPage(
+        _currentPage, _paginationManager.pages.length, _onPageChanged);
   }
 
   void previousPage() {
@@ -139,7 +141,8 @@ class EpubReaderController with WidgetsBindingObserver {
   }
 
   void jumpToPage(int page) {
-    _navigationManager.jumpToPage(page, _paginationManager.pages.length, _onPageChanged);
+    _navigationManager.jumpToPage(
+        page, _paginationManager.pages.length, _onPageChanged);
   }
 
   void _jumpToPage(int page) {
@@ -160,10 +163,11 @@ class EpubReaderController with WidgetsBindingObserver {
   void _onPageChanged(int page) {
     _currentPage = page;
     _updateCurrentChapter();
-    
+
     // 使用 Future.microtask 避免在 build 過程中修改 provider
-    Future.microtask(() => _progressManager.onPageChanged(book, _paginationManager.pages, page));
-    
+    Future.microtask(() =>
+        _progressManager.onPageChanged(book, _paginationManager.pages, page));
+
     onStateChanged();
   }
 
@@ -208,7 +212,8 @@ class EpubReaderController with WidgetsBindingObserver {
 
   /// 同步保存進度
   void _saveProgressSync() {
-    _progressManager.saveProgressSync(book, _paginationManager.pages, _currentPage);
+    _progressManager.saveProgressSync(
+        book, _paginationManager.pages, _currentPage);
   }
 
   /// 清理資源

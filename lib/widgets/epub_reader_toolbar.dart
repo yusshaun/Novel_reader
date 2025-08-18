@@ -41,13 +41,13 @@ class EpubReaderToolbar extends StatelessWidget {
               icon: const Icon(Icons.arrow_back),
               onPressed: onBack,
             ),
-            
+
             // 上一頁按鈕
             IconButton(
               icon: const Icon(Icons.navigate_before),
               onPressed: currentPage > 0 ? onPreviousPage : null,
             ),
-            
+
             // 頁面信息（可點擊跳轉）
             Expanded(
               child: GestureDetector(
@@ -66,7 +66,9 @@ class EpubReaderToolbar extends StatelessWidget {
                       ),
                       if (totalPages > 0)
                         LinearProgressIndicator(
-                          value: totalPages > 0 ? (currentPage + 1) / totalPages : 0.0,
+                          value: totalPages > 0
+                              ? (currentPage + 1) / totalPages
+                              : 0.0,
                           backgroundColor: Colors.grey[300],
                           valueColor: AlwaysStoppedAnimation<Color>(
                             Theme.of(context).primaryColor,
@@ -77,14 +79,14 @@ class EpubReaderToolbar extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // 章節選擇按鈕
             IconButton(
               icon: const Icon(Icons.list),
               onPressed: totalChapters > 0 ? onShowChapterMenu : null,
               tooltip: '章節列表',
             ),
-            
+
             // 下一頁按鈕
             IconButton(
               icon: const Icon(Icons.navigate_next),
@@ -113,7 +115,7 @@ class ReadingProgressIndicator extends StatelessWidget {
     if (totalPages <= 0) return const SizedBox.shrink();
 
     final percentage = ((currentPage + 1) / totalPages * 100).toInt();
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(

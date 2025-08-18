@@ -13,10 +13,12 @@ class EpubReaderScreenModular extends ConsumerStatefulWidget {
   }) : super(key: key);
 
   @override
-  ConsumerState<EpubReaderScreenModular> createState() => _EpubReaderScreenModularState();
+  ConsumerState<EpubReaderScreenModular> createState() =>
+      _EpubReaderScreenModularState();
 }
 
-class _EpubReaderScreenModularState extends ConsumerState<EpubReaderScreenModular> {
+class _EpubReaderScreenModularState
+    extends ConsumerState<EpubReaderScreenModular> {
   late EpubReaderController _controller;
   bool _isInitialized = false;
 
@@ -36,14 +38,14 @@ class _EpubReaderScreenModularState extends ConsumerState<EpubReaderScreenModula
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     // 初始化分頁（需要屏幕尺寸）
     if (!_isInitialized) {
       final screenSize = MediaQuery.of(context).size;
       _controller.initializePagination(screenSize);
       _isInitialized = true;
     }
-    
+
     // 處理屏幕尺寸變化
     final currentSize = MediaQuery.of(context).size;
     _controller.handleScreenSizeChange(currentSize);
@@ -65,7 +67,7 @@ class _EpubReaderScreenModularState extends ConsumerState<EpubReaderScreenModula
             bottom: 70, // 為工具欄留出空間
             child: _buildPageView(),
           ),
-          
+
           // 固定工具欄
           EpubReaderToolbar(
             currentPage: _controller.currentPage,
@@ -78,7 +80,7 @@ class _EpubReaderScreenModularState extends ConsumerState<EpubReaderScreenModula
             onShowPageJump: () => _controller.showPageJumpDialog(context),
             onBack: () => Navigator.of(context).pop(),
           ),
-          
+
           // 進度指示器（右上角）
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,

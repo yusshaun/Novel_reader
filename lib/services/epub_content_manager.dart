@@ -6,7 +6,7 @@ import '../models/epub_book.dart';
 class EpubContentManager {
   List<epubx.EpubChapter> _chapters = [];
   String _originalText = '';
-  
+
   List<epubx.EpubChapter> get chapters => _chapters;
   String get originalText => _originalText;
 
@@ -15,14 +15,14 @@ class EpubContentManager {
     try {
       print('Loading book from: ${book.filePath}');
       final file = File(book.filePath);
-      
+
       if (!await file.exists()) {
         return LoadResult.error('Book file not found at ${book.filePath}');
       }
 
       final bytes = await file.readAsBytes();
       print('File size: ${bytes.length} bytes');
-      
+
       final epub = await epubx.EpubReader.readBook(bytes);
       print('EPUB loaded successfully');
       print('Title: ${epub.Title}');
@@ -34,7 +34,7 @@ class EpubContentManager {
 
       // 載入章節內容
       bool contentLoaded = false;
-      
+
       if (epub.Chapters != null && epub.Chapters!.isNotEmpty) {
         for (int i = 0; i < epub.Chapters!.length; i++) {
           final chapter = epub.Chapters![i];
@@ -47,7 +47,8 @@ class EpubContentManager {
               contentLoaded = true;
               print('Added chapter $i with ${text.length} characters');
             } else {
-              print('Chapter $i text too short or empty after extraction (length: ${text.trim().length})');
+              print(
+                  'Chapter $i text too short or empty after extraction (length: ${text.trim().length})');
             }
           } else {
             print('Chapter $i has no HTML content');
@@ -56,14 +57,15 @@ class EpubContentManager {
 
         if (contentLoaded) {
           _originalText = allChapterTexts.join('\n\n\n'); // 章節間用三個換行分隔
-          print('✅ Method 1 successful: Loaded ${_chapters.length} chapters with ${_originalText.length} total characters');
+          print(
+              '✅ Method 1 successful: Loaded ${_chapters.length} chapters with ${_originalText.length} total characters');
           return LoadResult.success(_chapters, _originalText);
         }
       }
 
       // 如果章節載入失敗，嘗試其他方法
       print('❌ Method 1 failed, trying Method 2: Reading from HTML files');
-      
+
       // Method 2: 從HTML文件讀取
       if (epub.Content?.Html != null) {
         for (final htmlFile in epub.Content!.Html!.values) {
@@ -79,13 +81,13 @@ class EpubContentManager {
 
         if (contentLoaded) {
           _originalText = allChapterTexts.join('\n\n\n');
-          print('✅ Method 2 successful: Loaded ${allChapterTexts.length} HTML sections');
+          print(
+              '✅ Method 2 successful: Loaded ${allChapterTexts.length} HTML sections');
           return LoadResult.success(_chapters, _originalText);
         }
       }
 
       return LoadResult.error('No readable content found in the EPUB file');
-      
     } catch (e) {
       print('Error loading book: $e');
       return LoadResult.error('Failed to load book: $e');
@@ -154,9 +156,12 @@ class LoadResult {
   final List<epubx.EpubChapter>? chapters;
   final String? content;
 
-  LoadResult.success(this.chapters, this.content) 
-      : isSuccess = true, errorMessage = null;
-  
-  LoadResult.error(this.errorMessage) 
-      : isSuccess = false, chapters = null, content = null;
+  LoadResult.success(this.chapters, this.content)
+      : isSuccess = true,
+        errorMessage = null;
+
+  LoadResult.error(this.errorMessage)
+      : isSuccess = false,
+        chapters = null,
+        content = null;
 }

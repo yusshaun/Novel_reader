@@ -22,9 +22,9 @@ class PaginationManager {
 
     // 計算可用的文字顯示區域
     final availableWidth = screenSize.width - (horizontalPadding * 2);
-    final availableHeight = screenSize.height - 
-        (verticalPadding * 2) - 
-        bottomToolbarHeight - 
+    final availableHeight = screenSize.height -
+        (verticalPadding * 2) -
+        bottomToolbarHeight -
         bottomSpacing;
 
     // 計算每頁可容納的文字
@@ -53,9 +53,10 @@ class PaginationManager {
 
     for (final line in lines) {
       final lineWithBreak = line + '\n';
-      
+
       // 檢查添加這一行是否會超出頁面容量
-      if (currentPageChars + lineWithBreak.length > maxCharsPerPage && currentPage.isNotEmpty) {
+      if (currentPageChars + lineWithBreak.length > maxCharsPerPage &&
+          currentPage.isNotEmpty) {
         // 當前頁面已滿，開始新頁面
         pages.add(currentPage.trim());
         currentPage = lineWithBreak;
@@ -76,18 +77,19 @@ class PaginationManager {
   }
 
   /// 為所有章節建立分頁並建立章節映射
-  PaginationResult paginateChapters(List<epubx.EpubChapter> chapters, Size screenSize, String Function(String) textExtractor) {
+  PaginationResult paginateChapters(List<epubx.EpubChapter> chapters,
+      Size screenSize, String Function(String) textExtractor) {
     _pages.clear();
     _chapterPageMapping.clear();
 
     int currentPageIndex = 0;
-    
+
     for (int i = 0; i < chapters.length; i++) {
       final chapter = chapters[i];
-      
+
       // 記錄章節開始的頁面位置
       _chapterPageMapping[i] = currentPageIndex;
-      
+
       // 分頁章節內容
       final chapterText = textExtractor(chapter.HtmlContent ?? '');
       if (chapterText.trim().isNotEmpty) {
@@ -97,7 +99,8 @@ class PaginationManager {
       }
     }
 
-    print('Pagination completed: ${_pages.length} pages, ${_chapterPageMapping.length} chapters');
+    print(
+        'Pagination completed: ${_pages.length} pages, ${_chapterPageMapping.length} chapters');
     return PaginationResult(_pages, _chapterPageMapping);
   }
 
@@ -113,17 +116,17 @@ class PaginationManager {
     String? currentPageContent;
     String? searchKeywords;
     int? currentCharacterOffset;
-    
+
     if (oldPages.isNotEmpty && currentPage < oldPages.length) {
       currentPageContent = oldPages[currentPage];
-      
+
       // 計算當前頁面在整個文本中的大概位置
       int totalCharsBeforeCurrentPage = 0;
       for (int i = 0; i < currentPage && i < oldPages.length; i++) {
         totalCharsBeforeCurrentPage += oldPages[i].length;
       }
       currentCharacterOffset = totalCharsBeforeCurrentPage;
-      
+
       // 提取關鍵詞用於搜索（取中間部分，避免頁面邊界問題）
       if (currentPageContent.length > 100) {
         int startPos = currentPageContent.length ~/ 4;
@@ -132,16 +135,18 @@ class PaginationManager {
       } else if (currentPageContent.length > 20) {
         searchKeywords = currentPageContent.substring(0, 20).trim();
       }
-      
+
       print('Current page content length: ${currentPageContent.length}');
       print('Search keywords: $searchKeywords');
       print('Character offset: $currentCharacterOffset');
     }
 
-    final currentPageRatio = oldPages.isNotEmpty ? currentPage / oldPages.length : 0.0;
+    final currentPageRatio =
+        oldPages.isNotEmpty ? currentPage / oldPages.length : 0.0;
 
     // 重新分頁
-    final paginationResult = paginateChapters(chapters, screenSize, textExtractor);
+    final paginationResult =
+        paginateChapters(chapters, screenSize, textExtractor);
 
     // 使用多種方法嘗試找到最佳的頁面位置
     int newPage = 0;
@@ -172,7 +177,7 @@ class PaginationManager {
         estimatedOffset += _pages[i].length;
       }
     }
-    
+
     // 方法3: 如果前兩種方法都失敗，使用比例計算
     if (!foundMatch) {
       newPage = (_pages.length * currentPageRatio)

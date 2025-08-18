@@ -4,7 +4,7 @@ import 'package:epubx/epubx.dart' as epubx;
 /// 負責頁面導航和章節跳轉功能
 class NavigationManager {
   final PageController pageController;
-  
+
   NavigationManager(this.pageController);
 
   /// 跳轉到下一頁
@@ -55,13 +55,13 @@ class NavigationManager {
     if (chapterIndex >= 0 && chapterIndex < chapters.length) {
       final startPage = chapterPageMapping[chapterIndex] ?? 0;
       print('Jumping to chapter $chapterIndex at page $startPage');
-      
+
       pageController.animateToPage(
         startPage,
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
-      
+
       onPageChanged(startPage);
       updateCurrentChapter(chapterIndex);
     }
@@ -73,7 +73,7 @@ class NavigationManager {
     Map<int, int> chapterPageMapping,
   ) {
     int currentChapterIndex = 0;
-    
+
     // 找到當前頁面所屬的章節
     for (final entry in chapterPageMapping.entries) {
       if (currentPage >= entry.value) {
@@ -82,7 +82,7 @@ class NavigationManager {
         break;
       }
     }
-    
+
     return currentChapterIndex;
   }
 
@@ -95,10 +95,10 @@ class NavigationManager {
   ) {
     print('Page changed to: ${page + 1}');
     setCurrentPage(page);
-    
+
     // 更新當前章節
     final newChapterIndex = updateChapter(page);
-    
+
     // 保存進度
     saveProgress(page, newChapterIndex);
   }
@@ -125,18 +125,26 @@ class NavigationManager {
               itemBuilder: (context, index) {
                 final chapter = chapters[index];
                 final isCurrentChapter = index == currentChapterIndex;
-                
+
                 return ListTile(
                   title: Text(
                     chapter.Title ?? '章節 ${index + 1}',
                     style: TextStyle(
-                      fontWeight: isCurrentChapter ? FontWeight.bold : FontWeight.normal,
-                      color: isCurrentChapter ? Theme.of(context).primaryColor : null,
+                      fontWeight: isCurrentChapter
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: isCurrentChapter
+                          ? Theme.of(context).primaryColor
+                          : null,
                     ),
                   ),
                   leading: Icon(
-                    isCurrentChapter ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                    color: isCurrentChapter ? Theme.of(context).primaryColor : null,
+                    isCurrentChapter
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: isCurrentChapter
+                        ? Theme.of(context).primaryColor
+                        : null,
                   ),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -165,7 +173,7 @@ class NavigationManager {
     Function(int) onPageSelected,
   ) async {
     final controller = TextEditingController(text: '${currentPage + 1}');
-    
+
     await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -188,7 +196,9 @@ class NavigationManager {
             TextButton(
               onPressed: () {
                 final pageNumber = int.tryParse(controller.text);
-                if (pageNumber != null && pageNumber >= 1 && pageNumber <= totalPages) {
+                if (pageNumber != null &&
+                    pageNumber >= 1 &&
+                    pageNumber <= totalPages) {
                   Navigator.of(context).pop();
                   onPageSelected(pageNumber - 1); // 轉換為0-based索引
                 }
