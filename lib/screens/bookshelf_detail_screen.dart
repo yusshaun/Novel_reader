@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:typed_data';
 import '../models/bookshelf.dart';
 import '../models/epub_book.dart';
 import '../providers/books_provider.dart';
 import '../providers/bookshelves_provider.dart';
+import '../services/cover_image_service.dart';
 import 'epub_reader_screen.dart';
 
 class BookshelfDetailScreen extends ConsumerStatefulWidget {
@@ -431,11 +433,81 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
   }
 
   void _editShelfCover() {
-    // TODO: 實現書架封面編輯功能
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('編輯書架封面'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('從相冊選擇'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _selectCoverFromGallery();
+                },
+              ),
+              if (widget.bookshelf.coverImage != null)
+                ListTile(
+                  leading: const Icon(Icons.delete),
+                  title: const Text('移除封面'),
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    await _removeCover();
+                  },
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _selectCoverFromGallery() async {
+    try {
+      final imageBytes = await CoverImageService.pickImageFromFile();
+      if (imageBytes != null) {
+        await _updateShelfCover(imageBytes);
+      }
+    } catch (e) {
+      _showMessage('選擇封面失敗: $e', isError: true);
+    }
+  }
+
+  Future<void> _updateShelfCover(Uint8List imageBytes) async {
+    try {
+      final updatedShelf = widget.bookshelf.copyWith(coverImage: imageBytes);
+      await ref.read(bookshelvesProvider.notifier).updateShelf(updatedShelf);
+      _showMessage('書架封面已更新');
+    } catch (e) {
+      _showMessage('更新封面失敗: $e', isError: true);
+    }
+  }
+
+  Future<void> _removeCover() async {
+    try {
+      final updatedShelf = widget.bookshelf.copyWith(clearCoverImage: true);
+      await ref.read(bookshelvesProvider.notifier).updateShelf(updatedShelf);
+      _showMessage('書架封面已移除');
+    } catch (e) {
+      _showMessage('移除封面失敗: $e', isError: true);
+    }
+  }
+
+  void _showMessage(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('封面編輯功能待實現'),
-        backgroundColor: Colors.orange,
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
