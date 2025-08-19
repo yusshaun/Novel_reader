@@ -512,6 +512,93 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
     );
   }
 
+  void _editBookCover(EpubBook book) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('編輯《${book.title}》封面'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (book.coverImage != null)
+                Container(
+                  width: 120,
+                  height: 180,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      book.coverImage!,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('從相冊選擇'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _selectBookCoverFromGallery(book);
+                },
+              ),
+              if (book.coverImage != null)
+                ListTile(
+                  leading: const Icon(Icons.delete),
+                  title: const Text('移除封面'),
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    await _removeBookCover(book);
+                  },
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _selectBookCoverFromGallery(EpubBook book) async {
+    try {
+      final imageBytes = await CoverImageService.pickImageFromFile();
+      if (imageBytes != null) {
+        await _updateBookCover(book, imageBytes);
+      }
+    } catch (e) {
+      _showMessage('選擇封面失敗: $e', isError: true);
+    }
+  }
+
+  Future<void> _updateBookCover(EpubBook book, Uint8List imageBytes) async {
+    try {
+      final updatedBook = book.copyWith(coverImage: imageBytes);
+      await ref.read(booksProvider.notifier).updateBook(updatedBook);
+      _showMessage('《${book.title}》封面已更新');
+    } catch (e) {
+      _showMessage('更新封面失敗: $e', isError: true);
+    }
+  }
+
+  Future<void> _removeBookCover(EpubBook book) async {
+    try {
+      final updatedBook = book.copyWith(clearCoverImage: true);
+      await ref.read(booksProvider.notifier).updateBook(updatedBook);
+      _showMessage('《${book.title}》封面已移除');
+    } catch (e) {
+      _showMessage('移除封面失敗: $e', isError: true);
+    }
+  }
+
   void _showEditShelfDialog() {
     final TextEditingController nameController =
         TextEditingController(text: widget.bookshelf.shelfName);
@@ -825,26 +912,76 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            secondary: book.coverImage != null
-                                ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: Image.memory(
-                                      book.coverImage!,
-                                      width: 40,
-                                      height: 60,
-                                      fit: BoxFit.cover,
+                            secondary: GestureDetector(
+                              onLongPress: () {
+                                Navigator.pop(context);
+                                _editBookCover(book);
+                              },
+                              child: book.coverImage != null
+                                  ? Stack(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                          child: Image.memory(
+                                            book.coverImage!,
+                                            width: 40,
+                                            height: 60,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 2,
+                                          right: 2,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(1),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black54,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: const Icon(
+                                              Icons.edit,
+                                              color: Colors.white,
+                                              size: 8,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Stack(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 60,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[300],
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: const Icon(Icons.book,
+                                              color: Colors.grey),
+                                        ),
+                                        Positioned(
+                                          top: 2,
+                                          right: 2,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(1),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black54,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: const Icon(
+                                              Icons.add_a_photo,
+                                              color: Colors.white,
+                                              size: 8,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  )
-                                : Container(
-                                    width: 40,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[300],
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Icon(Icons.book,
-                                        color: Colors.grey),
-                                  ),
+                            ),
                           );
                         },
                       ),
@@ -1027,6 +1164,11 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
           _openBook(book.id);
         }
       },
+      onLongPress: () {
+        if (!_isEditMode && !_isSortMode) {
+          _editBookCover(book);
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
@@ -1127,6 +1269,23 @@ class _BookshelfDetailScreenState extends ConsumerState<BookshelfDetailScreen> {
                     isSelected ? Icons.check_circle : Icons.circle_outlined,
                     color: isSelected ? Colors.blue : Colors.grey,
                     size: 24,
+                  ),
+                ),
+              ),
+            if (!_isEditMode && !_isSortMode)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.edit,
+                    color: Colors.white,
+                    size: 12,
                   ),
                 ),
               ),
