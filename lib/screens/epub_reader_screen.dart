@@ -21,7 +21,7 @@ class EpubReaderScreen extends ConsumerStatefulWidget {
 class _EpubReaderScreenState extends ConsumerState<EpubReaderScreen>
     with WidgetsBindingObserver {
   int _currentPage = 0;
-  final List<String> _pages = ['Loading...'];
+  final List<String> _pages = ['載入中...'];
   List<epubx.EpubChapter> _chapters = [];
   Map<int, int> _chapterPageMapping = {}; // 章節到頁面的映射
   int _currentChapterIndex = 0;

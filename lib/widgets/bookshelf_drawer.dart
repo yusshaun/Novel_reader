@@ -26,7 +26,7 @@ class BookshelfDrawer extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'My Bookshelves',
+                  '我的書架',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         color: Theme.of(context).colorScheme.onPrimary,
                       ),
@@ -34,7 +34,10 @@ class BookshelfDrawer extends ConsumerWidget {
                 Text(
                   '${bookshelves.length} shelves',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onPrimary
+                            .withOpacity(0.7),
                       ),
                 ),
               ],
@@ -45,7 +48,7 @@ class BookshelfDrawer extends ConsumerWidget {
               itemCount: bookshelves.length,
               itemBuilder: (context, index) {
                 final shelf = bookshelves[index];
-                
+
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundColor: Color(shelf.themeColorValue),
@@ -58,7 +61,7 @@ class BookshelfDrawer extends ConsumerWidget {
                     ),
                   ),
                   title: Text(shelf.shelfName),
-                  subtitle: Text('${shelf.bookIds.length} books'),
+                  subtitle: Text('${shelf.bookIds.length} 本書'),
                   trailing: shelf.isDefault
                       ? const Icon(Icons.star, color: Colors.amber, size: 20)
                       : null,
@@ -74,7 +77,7 @@ class BookshelfDrawer extends ConsumerWidget {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.add),
-            title: const Text('Create New Shelf'),
+            title: const Text('新增書架'),
             onTap: () {
               Navigator.pop(context);
               _showCreateShelfDialog(context, ref);
@@ -124,14 +127,14 @@ class _CreateShelfDialogState extends ConsumerState<_CreateShelfDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create New Shelf'),
+      title: const Text('新增書架'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _nameController,
             decoration: const InputDecoration(
-              labelText: 'Shelf Name',
+              labelText: '書架名稱',
               border: OutlineInputBorder(),
             ),
           ),
@@ -139,7 +142,7 @@ class _CreateShelfDialogState extends ConsumerState<_CreateShelfDialog> {
           TextField(
             controller: _descriptionController,
             decoration: const InputDecoration(
-              labelText: 'Description (optional)',
+              labelText: '描述（可選）',
               border: OutlineInputBorder(),
             ),
             maxLines: 2,
@@ -147,7 +150,7 @@ class _CreateShelfDialogState extends ConsumerState<_CreateShelfDialog> {
           const SizedBox(height: 16),
           const Align(
             alignment: Alignment.centerLeft,
-            child: Text('Color'),
+            child: Text('顏色'),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -178,7 +181,7 @@ class _CreateShelfDialogState extends ConsumerState<_CreateShelfDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: const Text('取消'),
         ),
         FilledButton(
           onPressed: _nameController.text.trim().isEmpty
@@ -195,7 +198,7 @@ class _CreateShelfDialogState extends ConsumerState<_CreateShelfDialog> {
                     Navigator.pop(context);
                   }
                 },
-          child: const Text('Create'),
+          child: const Text('新增'),
         ),
       ],
     );

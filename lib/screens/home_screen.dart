@@ -39,18 +39,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final List<NavigationItem> _navigationItems = [
     NavigationItem(
       icon: Icons.library_books,
-      label: 'Library',
-      title: 'Library',
+      label: '書庫',
+      title: '書庫',
     ),
     NavigationItem(
       icon: Icons.folder,
-      label: 'Shelves',
-      title: 'Bookshelves',
+      label: '書架',
+      title: '書架',
     ),
     NavigationItem(
       icon: Icons.history,
-      label: 'Recent',
-      title: 'Recent Books',
+      label: '最近',
+      title: '最近閱讀',
     ),
   ];
 
@@ -79,7 +79,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error importing books: $e'),
+            content: Text('匯入書籍錯誤: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -117,7 +117,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Added "${book.title}" to library'),
+                content: Text('已將《${book.title}》添加到書庫'),
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -235,7 +235,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // 書架管理相關選項
             ListTile(
               leading: const Icon(Icons.folder_special),
-              title: const Text('Manage Bookshelves'),
+              title: const Text('管理書架'),
               onTap: () {
                 Navigator.pop(context);
                 // 可以添加書架管理功能
@@ -324,7 +324,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           FilledButton.icon(
             onPressed: _importEpubFile,
             icon: const Icon(Icons.upload_file),
-            label: const Text('Import Books'),
+            label: const Text('匯入書籍'),
           ),
         ],
       ),

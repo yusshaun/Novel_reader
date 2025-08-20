@@ -29,7 +29,7 @@ class BookshelvesNotifier extends StateNotifier<List<BookShelf>> {
     if (_box.isEmpty) {
       final defaultShelf = BookShelf(
         id: _uuid.v4(),
-        shelfName: 'My Library',
+        shelfName: '我的書庫',
         bookIds: [],
         themeColorValue: Colors.blue.value,
         createdAt: DateTime.now(),

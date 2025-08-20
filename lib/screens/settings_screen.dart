@@ -9,13 +9,13 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const Text('設定'),
       ),
       body: ListView(
         children: [
           _buildSection(
             context,
-            'Reading',
+            '閱讀',
             [
               _buildReaderSettingsTile(context),
               _buildSyncSettingsTile(context),
@@ -23,7 +23,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           _buildSection(
             context,
-            'Appearance',
+            '外觀',
             [
               _buildThemeSettingsTile(context),
               _buildLanguageSettingsTile(context),
@@ -31,7 +31,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           _buildSection(
             context,
-            'Storage',
+            '儲存',
             [
               _buildStorageSettingsTile(context),
               _buildBackupSettingsTile(context),
@@ -39,7 +39,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           _buildSection(
             context,
-            'About',
+            '關於',
             [
               _buildAboutTile(context),
             ],
@@ -49,7 +49,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSection(BuildContext context, String title, List<Widget> children) {
+  Widget _buildSection(
+      BuildContext context, String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -71,8 +72,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget _buildReaderSettingsTile(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.auto_stories),
-      title: const Text('Reading Preferences'),
-      subtitle: const Text('Font, themes, and reading behavior'),
+      title: const Text('閱讀偏好'),
+      subtitle: const Text('字體、主題和閱讀行為'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         // TODO: Navigate to reader settings
@@ -83,8 +84,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget _buildSyncSettingsTile(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.sync),
-      title: const Text('Sync Settings'),
-      subtitle: const Text('Cloud sync and offline reading'),
+      title: const Text('同步設定'),
+      subtitle: const Text('雲端同步和離線閱讀'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         // TODO: Navigate to sync settings
@@ -95,8 +96,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget _buildThemeSettingsTile(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.palette),
-      title: const Text('Theme'),
-      subtitle: const Text('Light, dark, or system'),
+      title: const Text('主題'),
+      subtitle: const Text('淺色、深色或跟隨系統'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         _showThemeSelector(context);
@@ -107,8 +108,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget _buildLanguageSettingsTile(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.language),
-      title: const Text('Language'),
-      subtitle: const Text('App language'),
+      title: const Text('語言'),
+      subtitle: const Text('應用程式語言'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         // TODO: Navigate to language settings
@@ -119,8 +120,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget _buildStorageSettingsTile(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.storage),
-      title: const Text('Storage'),
-      subtitle: const Text('Manage downloaded books'),
+      title: const Text('儲存空間'),
+      subtitle: const Text('管理已下載的書籍'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         // TODO: Navigate to storage settings
@@ -131,8 +132,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget _buildBackupSettingsTile(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.backup),
-      title: const Text('Backup & Restore'),
-      subtitle: const Text('Backup your library and settings'),
+      title: const Text('備份與還原'),
+      subtitle: const Text('備份您的書庫和設定'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         // TODO: Navigate to backup settings
@@ -143,8 +144,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget _buildAboutTile(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.info),
-      title: const Text('About'),
-      subtitle: const Text('Version info and licenses'),
+      title: const Text('關於'),
+      subtitle: const Text('版本資訊和授權'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         _showAboutDialog(context);
@@ -156,12 +157,12 @@ class SettingsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Choose Theme'),
+        title: const Text('選擇主題'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<AdaptiveThemeMode>(
-              title: const Text('Light'),
+              title: const Text('淺色'),
               value: AdaptiveThemeMode.light,
               groupValue: AdaptiveTheme.of(context).mode,
               onChanged: (mode) {
@@ -172,7 +173,7 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
             RadioListTile<AdaptiveThemeMode>(
-              title: const Text('Dark'),
+              title: const Text('深色'),
               value: AdaptiveThemeMode.dark,
               groupValue: AdaptiveTheme.of(context).mode,
               onChanged: (mode) {
@@ -183,7 +184,7 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
             RadioListTile<AdaptiveThemeMode>(
-              title: const Text('System'),
+              title: const Text('跟隨系統'),
               value: AdaptiveThemeMode.system,
               groupValue: AdaptiveTheme.of(context).mode,
               onChanged: (mode) {
@@ -206,13 +207,13 @@ class SettingsScreen extends ConsumerWidget {
       applicationVersion: '1.0.0',
       applicationIcon: const Icon(Icons.book, size: 48),
       children: [
-        const Text('A cross-platform EPUB reader built with Flutter.'),
+        const Text('一個使用 Flutter 開發的跨平台 EPUB 閱讀器。'),
         const SizedBox(height: 16),
-        const Text('Features:'),
-        const Text('• EPUB reading with customizable themes'),
-        const Text('• Cross-device sync'),
-        const Text('• Customizable bookshelves'),
-        const Text('• Offline reading support'),
+        const Text('功能：'),
+        const Text('• 支援自訂主題的 EPUB 閱讀'),
+        const Text('• 跨裝置同步'),
+        const Text('• 可自訂書架'),
+        const Text('• 離線閱讀支援'),
       ],
     );
   }
