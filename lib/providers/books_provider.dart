@@ -39,7 +39,9 @@ class BooksNotifier extends StateNotifier<List<EpubBook>> {
   final Box<EpubBook> _box;
 
   BooksNotifier(this._box) : super(_box.values.toList()) {
-    // Note: Hive 2.x doesn't have listenable, we'll manually refresh
+    _box.listenable().addListener(() {
+      state = _box.values.toList();
+    });
   }
 
   Future<void> addBook(EpubBook book) async {

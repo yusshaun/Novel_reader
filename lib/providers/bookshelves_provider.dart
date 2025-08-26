@@ -22,14 +22,16 @@ class BookshelvesNotifier extends StateNotifier<List<BookShelf>> {
 
   BookshelvesNotifier(this._box) : super(_box.values.toList()) {
     _initializeDefaultShelf();
-    // Note: Hive 2.x doesn't have listenable, we'll manually refresh
+    _box.listenable().addListener(() {
+      state = _box.values.toList();
+    });
   }
 
   Future<void> _initializeDefaultShelf() async {
     if (_box.isEmpty) {
       final defaultShelf = BookShelf(
         id: _uuid.v4(),
-        shelfName: '我的書庫',
+        shelfName: 'My Library',
         bookIds: [],
         themeColorValue: Colors.blue.value,
         createdAt: DateTime.now(),
@@ -60,7 +62,8 @@ class BookshelvesNotifier extends StateNotifier<List<BookShelf>> {
   }
 
   Future<void> updateShelf(BookShelf shelf) async {
-    await _box.put(shelf.id, shelf);
+    final updatedShelf = shelf.copyWith(updatedAt: DateTime.now());
+    await _box.put(shelf.id, updatedShelf);
     state = _box.values.toList();
   }
 

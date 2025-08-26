@@ -32,16 +32,13 @@ class ReadingProgress extends HiveObject {
   int totalPages;
 
   @HiveField(9)
-  int readingTimeMs; // 以毫秒為單位保存閱讀時間
+  Duration readingTime;
 
   @HiveField(10)
   String? lastReadText;
 
   @HiveField(11)
   bool isSynced;
-
-  // 便利的 getter 來獲取 Duration 對象
-  Duration get readingTime => Duration(milliseconds: readingTimeMs);
 
   ReadingProgress({
     required this.id,
@@ -53,7 +50,7 @@ class ReadingProgress extends HiveObject {
     this.chapterTitle,
     this.progressPercentage = 0.0,
     this.totalPages = 0,
-    this.readingTimeMs = 0,
+    this.readingTime = Duration.zero,
     this.lastReadText,
     this.isSynced = false,
   });
@@ -68,7 +65,7 @@ class ReadingProgress extends HiveObject {
     String? chapterTitle,
     double? progressPercentage,
     int? totalPages,
-    int? readingTimeMs,
+    Duration? readingTime,
     String? lastReadText,
     bool? isSynced,
   }) {
@@ -82,7 +79,7 @@ class ReadingProgress extends HiveObject {
       chapterTitle: chapterTitle ?? this.chapterTitle,
       progressPercentage: progressPercentage ?? this.progressPercentage,
       totalPages: totalPages ?? this.totalPages,
-      readingTimeMs: readingTimeMs ?? this.readingTimeMs,
+      readingTime: readingTime ?? this.readingTime,
       lastReadText: lastReadText ?? this.lastReadText,
       isSynced: isSynced ?? this.isSynced,
     );
@@ -116,7 +113,7 @@ class ReadingProgress extends HiveObject {
     }
 
     if (additionalReadingTime != null) {
-      readingTimeMs += additionalReadingTime.inMilliseconds;
+      readingTime += additionalReadingTime;
     }
 
     if (lastText != null) {
@@ -137,7 +134,7 @@ class ReadingProgress extends HiveObject {
       'chapterTitle': chapterTitle,
       'progressPercentage': progressPercentage,
       'totalPages': totalPages,
-      'readingTimeInSeconds': (readingTimeMs / 1000).round(),
+      'readingTimeInSeconds': readingTime.inSeconds,
       'lastReadText': lastReadText,
     };
   }
@@ -153,7 +150,7 @@ class ReadingProgress extends HiveObject {
       chapterTitle: data['chapterTitle'],
       progressPercentage: (data['progressPercentage'] ?? 0.0).toDouble(),
       totalPages: data['totalPages'] ?? 0,
-      readingTimeMs: (data['readingTimeInSeconds'] ?? 0) * 1000,
+      readingTime: Duration(seconds: data['readingTimeInSeconds'] ?? 0),
       lastReadText: data['lastReadText'],
       isSynced: true,
     );

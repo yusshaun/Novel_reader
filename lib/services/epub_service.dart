@@ -1,17 +1,22 @@
 import 'dart:io';
-import 'package:epubx/epubx.dart' as epubx;
+import 'dart:typed_data';
+import 'package:epubx/epubx.dart';
 import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import '../models/epub_book.dart' as models;
+import '../models/epub_book.dart';
 
 class EpubService {
   final _uuid = const Uuid();
 
-  Future<models.EpubBook?> parseEpubFile(File file) async {
+  Future<EpubBook?> parseEpubFile(File file) async {
     try {
       final bytes = await file.readAsBytes();
-      final epub = await epubx.EpubReader.readBook(bytes);
+      final epub = EpubReader.readBook(bytes);
+
+      if (epub == null) {
+        throw Exception('Failed to parse EPUB file');
+      }
 
       // Copy file to app directory
       final appDir = await getApplicationDocumentsDirectory();
@@ -21,90 +26,153 @@ class EpubService {
       }
 
       final fileName = path.basename(file.path);
-      final targetFile = File(path.join(booksDir.path, fileName));
-      await file.copy(targetFile.path);
+      final newPath = path.join(booksDir.path, fileName);
+      final copiedFile = await file.copy(newPath);
 
-      // Extract real metadata from EPUB
-      final title = epub.Title?.isNotEmpty == true
-          ? epub.Title!
-          : path.basenameWithoutExtension(fileName);
+      // Extract metadata
+      final title =
+          epub.Title?.trim() ?? path.basenameWithoutExtension(fileName);
+      final author = epub.Author?.trim() ?? 'Unknown Author';
+      final description = epub.Description?.trim();
+      final publisher = epub.Publisher?.trim();
+      final language = epub.Language?.trim();
 
-      final author =
-          epub.Author?.isNotEmpty == true ? epub.Author! : 'Unknown Author';
+      // Extract cover image
+      Uint8List? coverImage;
+      try {
+        final coverKey = epub.Content?.Images?.keys.firstWhere(
+          (key) => key.toLowerCase().contains('cover'),
+          orElse: () => '',
+        );
 
-      // Calculate total pages estimate based on content
-      int totalPages = 100; // Default estimate
-      if (epub.Chapters?.isNotEmpty == true) {
-        totalPages = epub.Chapters!.length * 10; // Rough estimate
+        if (coverKey?.isNotEmpty == true) {
+          coverImage = epub.Content?.Images?[coverKey]?.Content;
+        } else if (epub.Content?.Images?.isNotEmpty == true) {
+          // Use first available image as cover
+          coverImage = epub.Content?.Images?.values.first.Content;
+        }
+      } catch (e) {
+        // Cover extraction failed, continue without cover
       }
 
-      return models.EpubBook(
+      // Calculate total pages (estimate based on text content)
+      int totalPages = 0;
+      if (epub.Chapters != null) {
+        for (final chapter in epub.Chapters!) {
+          final content = chapter.HtmlContent ?? '';
+          // Rough estimation: 500 words per page, average 5 chars per word
+          final wordCount = content.length ~/ 5;
+          totalPages += (wordCount / 500).ceil();
+        }
+      }
+
+      final book = EpubBook(
         id: _uuid.v4(),
         title: title,
         author: author,
-        filePath: targetFile.path,
+        filePath: copiedFile.path,
         lastRead: DateTime.now(),
-        totalPages: totalPages,
+        coverImage: coverImage,
+        description: description,
+        publisher: publisher,
+        language: language,
+        totalPages: totalPages > 0 ? totalPages : 1,
       );
+
+      return book;
     } catch (e) {
-      throw Exception('Error parsing EPUB: $e');
+      print('Error parsing EPUB file: $e');
+      return null;
     }
   }
 
-  Future<models.EpubBook?> loadEpubFromPath(String filePath) async {
-    final file = File(filePath);
-    if (!await file.exists()) {
+  Future<EpubBook?> loadEpubFromPath(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        return null;
+      }
+      return await parseEpubFile(file);
+    } catch (e) {
+      print('Error loading EPUB from path: $e');
       return null;
     }
-    return parseEpubFile(file);
+  }
+
+  Future<List<EpubChapter>?> getChapters(String filePath) async {
+    try {
+      final file = File(filePath);
+      final bytes = await file.readAsBytes();
+      final epub = EpubReader.readBook(bytes);
+      return epub?.Chapters;
+    } catch (e) {
+      print('Error getting chapters: $e');
+      return null;
+    }
+  }
+
+  Future<String?> getChapterContent(String filePath, int chapterIndex) async {
+    try {
+      final chapters = await getChapters(filePath);
+      if (chapters != null && chapterIndex < chapters.length) {
+        return chapters[chapterIndex].HtmlContent;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting chapter content: $e');
+      return null;
+    }
+  }
+
+  Future<EpubBookRef?> openEpubForReading(String filePath) async {
+    try {
+      final file = File(filePath);
+      final bytes = await file.readAsBytes();
+      return EpubReader.openBook(bytes);
+    } catch (e) {
+      print('Error opening EPUB for reading: $e');
+      return null;
+    }
+  }
+
+  Future<bool> deleteEpubFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (await file.exists()) {
+        await file.delete();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error deleting EPUB file: $e');
+      return false;
+    }
   }
 
   Future<List<String>> searchInBook(String filePath, String query) async {
-    // Simplified search - return empty for now
-    return [];
-  }
+    try {
+      final chapters = await getChapters(filePath);
+      if (chapters == null) return [];
 
-  String extractTextFromHtml(String html) {
-    // Basic HTML tag removal
-    return html
-        .replaceAll(RegExp(r'<[^>]*>'), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-  }
+      final results = <String>[];
+      for (int i = 0; i < chapters.length; i++) {
+        final content = chapters[i].HtmlContent ?? '';
+        final lowerContent = content.toLowerCase();
+        final lowerQuery = query.toLowerCase();
 
-  List<String> paginateText(
-    String text, {
-    int charactersPerPage = 2000,
-    double fontSize = 16.0,
-    double screenWidth = 400,
-    double screenHeight = 600,
-  }) {
-    final pages = <String>[];
-    final words = text.split(' ');
-    final buffer = StringBuffer();
-    int currentLength = 0;
-
-    for (final word in words) {
-      if (currentLength + word.length > charactersPerPage &&
-          buffer.isNotEmpty) {
-        pages.add(buffer.toString().trim());
-        buffer.clear();
-        currentLength = 0;
+        if (lowerContent.contains(lowerQuery)) {
+          // Extract context around the found text
+          final index = lowerContent.indexOf(lowerQuery);
+          final start = (index - 50).clamp(0, content.length);
+          final end = (index + query.length + 50).clamp(0, content.length);
+          final context = content.substring(start, end);
+          results.add('Chapter ${i + 1}: ...$context...');
+        }
       }
-
-      if (buffer.isNotEmpty) {
-        buffer.write(' ');
-        currentLength++;
-      }
-
-      buffer.write(word);
-      currentLength += word.length;
+      return results;
+    } catch (e) {
+      print('Error searching in book: $e');
+      return [];
     }
-
-    if (buffer.isNotEmpty) {
-      pages.add(buffer.toString().trim());
-    }
-
-    return pages.isEmpty ? [''] : pages;
   }
 }

@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'epub_book.dart';
 
 part 'bookshelf.g.dart';
 
@@ -30,9 +30,6 @@ class BookShelf extends HiveObject {
   @HiveField(7)
   bool isDefault;
 
-  @HiveField(8)
-  Uint8List? coverImage;
-
   Color get themeColor => Color(themeColorValue);
 
   set themeColor(Color color) {
@@ -48,7 +45,6 @@ class BookShelf extends HiveObject {
     required this.updatedAt,
     this.description,
     this.isDefault = false,
-    this.coverImage,
   });
 
   BookShelf copyWith({
@@ -60,8 +56,6 @@ class BookShelf extends HiveObject {
     DateTime? updatedAt,
     String? description,
     bool? isDefault,
-    Uint8List? coverImage,
-    bool? clearCoverImage,
   }) {
     return BookShelf(
       id: id ?? this.id,
@@ -72,8 +66,6 @@ class BookShelf extends HiveObject {
       updatedAt: updatedAt ?? this.updatedAt,
       description: description ?? this.description,
       isDefault: isDefault ?? this.isDefault,
-      coverImage:
-          clearCoverImage == true ? null : (coverImage ?? this.coverImage),
     );
   }
 
